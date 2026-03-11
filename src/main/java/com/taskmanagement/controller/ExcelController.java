@@ -27,11 +27,13 @@ public class ExcelController {
      * 使用 Apache POI 解析 Excel
      */
     @PostMapping("/upload")
-    public ResponseEntity<Map<String, Object>> uploadExcel(@RequestParam("file") MultipartFile file) {
-        log.info("[POI] Received Excel upload request: {}, size: {} bytes", 
-                file.getOriginalFilename(), file.getSize());
+    public ResponseEntity<Map<String, Object>> uploadExcel(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam(value = "staffId", required = false) String staffId) {
+        log.info("[POI] Received Excel upload request: {}, size: {} bytes, staffId: {}", 
+                file.getOriginalFilename(), file.getSize(), staffId);
         
-        ExcelUploadResult result = excelService.parseExcelFile(file);
+        ExcelUploadResult result = excelService.parseExcelFile(file, staffId);
         
         // 记录上传日志
         uploadLogService.logUpload(file, "POI", result);
@@ -43,11 +45,13 @@ public class ExcelController {
      * 使用 Alibaba EasyExcel 解析 Excel
      */
     @PostMapping("/upload/easyexcel")
-    public ResponseEntity<Map<String, Object>> uploadExcelEasyExcel(@RequestParam("file") MultipartFile file) {
-        log.info("[EasyExcel] Received Excel upload request: {}, size: {} bytes", 
-                file.getOriginalFilename(), file.getSize());
+    public ResponseEntity<Map<String, Object>> uploadExcelEasyExcel(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam(value = "staffId", required = false) String staffId) {
+        log.info("[EasyExcel] Received Excel upload request: {}, size: {} bytes, staffId: {}", 
+                file.getOriginalFilename(), file.getSize(), staffId);
         
-        ExcelUploadResult result = easyExcelService.parseExcelFile(file);
+        ExcelUploadResult result = easyExcelService.parseExcelFile(file, staffId);
         
         // 记录上传日志
         uploadLogService.logUpload(file, "EasyExcel", result);
@@ -62,6 +66,7 @@ public class ExcelController {
         
         if (result.isSuccess()) {
             response.put("rowCount", result.getRowCount());
+            response.put("staffId", result.getUsername());
             response.put("tasks", result.getTasks());
         } else {
             response.put("errors", result.getErrors());

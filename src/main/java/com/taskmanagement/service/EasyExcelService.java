@@ -19,15 +19,15 @@ import java.util.List;
 @Service
 public class EasyExcelService {
 
-    public ExcelUploadResult parseExcelFile(MultipartFile file) {
+    public ExcelUploadResult parseExcelFile(MultipartFile file, String staffId) {
         if (file.isEmpty()) {
-            return ExcelUploadResult.error("File is empty", List.of("Please upload a non-empty file"));
+            return ExcelUploadResult.error("File is empty", List.of("Please upload a non-empty file"), staffId);
         }
 
         String filename = file.getOriginalFilename();
         if (filename == null || (!filename.endsWith(".xlsx") && !filename.endsWith(".xls"))) {
             return ExcelUploadResult.error("Invalid file type", 
-                List.of("Only .xlsx and .xls files are supported"));
+                List.of("Only .xlsx and .xls files are supported"), staffId);
         }
 
         ExcelDataListener listener = new ExcelDataListener();
@@ -38,32 +38,33 @@ public class EasyExcelService {
                     .doRead();
 
             if (!listener.getErrors().isEmpty()) {
-                return ExcelUploadResult.error("Validation failed", listener.getErrors());
+                return ExcelUploadResult.error("Validation failed", listener.getErrors(), staffId);
             }
 
             if (listener.getTasks().isEmpty()) {
-                return ExcelUploadResult.error("No data", List.of("No valid data rows found in the file"));
+                return ExcelUploadResult.error("No data", List.of("No valid data rows found in the file"), staffId);
             }
 
-            log.info("[EasyExcel] Successfully parsed {} tasks", listener.getTasks().size());
+            log.info("[EasyExcel] Successfully parsed {} tasks, uploaded by: {}", listener.getTasks().size(), staffId);
             return ExcelUploadResult.success(
                 String.format("Successfully parsed %d tasks (EasyExcel)", listener.getTasks().size()),
                 listener.getTasks(),
-                listener.getTasks().size()
+                listener.getTasks().size(),
+                staffId
             );
 
         } catch (ExcelDataConvertException e) {
             log.error("[EasyExcel] Data conversion error", e);
             return ExcelUploadResult.error("Data conversion error", 
-                List.of("Row " + e.getRowIndex() + ", Column " + e.getColumnIndex() + ": " + e.getMessage()));
+                List.of("Row " + e.getRowIndex() + ", Column " + e.getColumnIndex() + ": " + e.getMessage()), staffId);
         } catch (IOException e) {
             log.error("[EasyExcel] Error reading file", e);
             return ExcelUploadResult.error("Error reading file", 
-                List.of("Failed to read the Excel file: " + e.getMessage()));
+                List.of("Failed to read the Excel file: " + e.getMessage()), staffId);
         } catch (Exception e) {
             log.error("[EasyExcel] Parse error", e);
             return ExcelUploadResult.error("Parse error", 
-                List.of("Error parsing Excel file: " + e.getMessage()));
+                List.of("Error parsing Excel file: " + e.getMessage()), staffId);
         }
     }
 

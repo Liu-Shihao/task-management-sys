@@ -23,15 +23,15 @@ public class ExcelService {
     private static final String[] REQUIRED_HEADERS = {"Task Name", "Task Type", "Sequence Order"};
     private static final List<String> VALID_TASK_TYPES = Arrays.asList("JENKINS", "ANSIBLE", "MANUAL");
 
-    public ExcelUploadResult parseExcelFile(MultipartFile file) {
+    public ExcelUploadResult parseExcelFile(MultipartFile file, String staffId) {
         if (file.isEmpty()) {
-            return ExcelUploadResult.error("File is empty", List.of("Please upload a non-empty file"));
+            return ExcelUploadResult.error("File is empty", List.of("Please upload a non-empty file"), staffId);
         }
 
         String filename = file.getOriginalFilename();
         if (filename == null || (!filename.endsWith(".xlsx") && !filename.endsWith(".xls"))) {
             return ExcelUploadResult.error("Invalid file type", 
-                List.of("Only .xlsx and .xls files are supported"));
+                List.of("Only .xlsx and .xls files are supported"), staffId);
         }
 
         try (InputStream inputStream = file.getInputStream();
@@ -39,17 +39,17 @@ public class ExcelService {
 
             Sheet sheet = workbook.getSheetAt(0);
             if (sheet == null) {
-                return ExcelUploadResult.error("Empty workbook", List.of("No sheet found in the workbook"));
+                return ExcelUploadResult.error("Empty workbook", List.of("No sheet found in the workbook"), staffId);
             }
 
             Row headerRow = sheet.getRow(0);
             if (headerRow == null) {
-                return ExcelUploadResult.error("Invalid format", List.of("Header row is missing"));
+                return ExcelUploadResult.error("Invalid format", List.of("Header row is missing"), staffId);
             }
 
             List<String> errors = validateHeaders(headerRow);
             if (!errors.isEmpty()) {
-                return ExcelUploadResult.error("Invalid headers", errors);
+                return ExcelUploadResult.error("Invalid headers", errors, staffId);
             }
 
             List<TemplateTaskDTO> tasks = new ArrayList<>();
@@ -71,28 +71,29 @@ public class ExcelService {
             }
 
             if (!errors.isEmpty()) {
-                return ExcelUploadResult.error("Validation failed", errors);
+                return ExcelUploadResult.error("Validation failed", errors, staffId);
             }
 
             if (tasks.isEmpty()) {
-                return ExcelUploadResult.error("No data", List.of("No valid data rows found in the file"));
+                return ExcelUploadResult.error("No data", List.of("No valid data rows found in the file"), staffId);
             }
 
-            log.info("[POI] Successfully parsed {} tasks from Excel file", tasks.size());
+            log.info("[POI] Successfully parsed {} tasks from Excel file, uploaded by: {}", tasks.size(), staffId);
             return ExcelUploadResult.success(
                 String.format("Successfully parsed %d tasks", tasks.size()),
                 tasks,
-                tasks.size()
+                tasks.size(),
+                staffId
             );
 
         } catch (IOException e) {
             log.error("[POI] Error reading Excel file", e);
             return ExcelUploadResult.error("Error reading file", 
-                List.of("Failed to read the Excel file: " + e.getMessage()));
+                List.of("Failed to read the Excel file: " + e.getMessage()), staffId);
         } catch (Exception e) {
             log.error("[POI] Error parsing Excel file", e);
             return ExcelUploadResult.error("Parse error", 
-                List.of("Error parsing Excel file: " + e.getMessage()));
+                List.of("Error parsing Excel file: " + e.getMessage()), staffId);
         }
     }
 
