@@ -67,12 +67,50 @@ public class ExcelServiceImpl implements ExcelService {
         this.uploadLogRepository = uploadLogRepository;
     }
 
+    // 允许的文件扩展名
+    private static final String[] ALLOWED_EXTENSIONS = {".xlsx", ".xls"};
+
+    // 允许的 MIME 类型
+    private static final String[] ALLOWED_CONTENT_TYPES = {
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", // xlsx
+            "application/vnd.ms-excel"                                           // xls
+    };
+
     @Override
     @Transactional
     public ExcelUploadResult uploadAndParse(MultipartFile file) {
         ExcelUploadResult result = new ExcelUploadResult();
         UploadLog uploadLog = new UploadLog();
         uploadLog.setFileName(file.getOriginalFilename());
+
+        //校验文件格式
+        String filename = file.getOriginalFilename();
+        if (filename == null || filename.isEmpty()) {
+            String msg = "File name is required.";
+            result.addError(msg);
+            uploadLog.setStatus(UploadStatus.FAILED);
+            uploadLog.setErrorMessage(msg);
+            uploadLogRepository.save(uploadLog);
+            return result;
+        }
+
+        if (!isValidExtension(filename)) {
+            String msg = "Invalid file extension. Allowed extensions: .xlsx, .xls";
+            result.addError(msg);
+            uploadLog.setStatus(UploadStatus.FAILED);
+            uploadLog.setErrorMessage(msg);
+            uploadLogRepository.save(uploadLog);
+            return result;
+        }
+
+        if (!isValidContentType(file.getContentType())) {
+            String msg = "Invalid file type. Allowed MIME types: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel";
+            result.addError(msg);
+            uploadLog.setStatus(UploadStatus.FAILED);
+            uploadLog.setErrorMessage(msg);
+            uploadLogRepository.save(uploadLog);
+            return result;
+        }
 
         if (file.isEmpty()) {
             String msg = "Uploaded file is empty.";
@@ -282,6 +320,34 @@ public class ExcelServiceImpl implements ExcelService {
             case FORMULA -> cell.getCellFormula();
             default -> null;
         };
+    }
+
+    /**
+     * Check if the file has a valid extension (.xlsx or .xls)
+     */
+    private boolean isValidExtension(String filename) {
+        String lowerCaseFilename = filename.toLowerCase();
+        for (String ext : ALLOWED_EXTENSIONS) {
+            if (lowerCaseFilename.endsWith(ext)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Check if the file has a valid MIME type
+     */
+    private boolean isValidContentType(String contentType) {
+        if (contentType == null) {
+            return false;
+        }
+        for (String allowedType : ALLOWED_CONTENT_TYPES) {
+            if (allowedType.equals(contentType)) {
+                return true;
+            }
+        }
+        return false;
     }
 }
 
