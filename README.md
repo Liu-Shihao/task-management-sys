@@ -8,4 +8,8 @@
 - Maven
 
 
-## Project Setup
+## Project 
+User upload Excel -> Task 
+Template -> Task -> Rundown 
+
+

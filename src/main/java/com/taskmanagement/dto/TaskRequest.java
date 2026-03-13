@@ -1,25 +1,29 @@
 package com.taskmanagement.dto;
 
+import com.taskmanagement.enums.TaskStatus;
 import com.taskmanagement.enums.TaskType;
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.List;
 
-public class ExcelTaskData {
+/**
+ * 用于创建 / 更新 Task 的请求对象。
+ * 主要面向前端表单和 API 交互。
+ */
+public class TaskRequest {
 
     private String rundownCode;
     private String rundownName;
     private Integer sequenceNo;
     private String name;
     private String description;
+
+    private TaskStatus status;
     private TaskType automationType;
     private String automationTarget;
     private String automationParamsJson;
-    private String scheduleMode; // IMMEDIATE / ONCE / CRON
+
+    private Boolean schedulingEnabled;
     private Instant scheduledTime;
     private String cronExpression;
-
-    private final List<String> errors = new ArrayList<>();
 
     public String getRundownCode() {
         return rundownCode;
@@ -61,6 +65,14 @@ public class ExcelTaskData {
         this.description = description;
     }
 
+    public TaskStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(TaskStatus status) {
+        this.status = status;
+    }
+
     public TaskType getAutomationType() {
         return automationType;
     }
@@ -85,12 +97,12 @@ public class ExcelTaskData {
         this.automationParamsJson = automationParamsJson;
     }
 
-    public String getScheduleMode() {
-        return scheduleMode;
+    public Boolean getSchedulingEnabled() {
+        return schedulingEnabled;
     }
 
-    public void setScheduleMode(String scheduleMode) {
-        this.scheduleMode = scheduleMode;
+    public void setSchedulingEnabled(Boolean schedulingEnabled) {
+        this.schedulingEnabled = schedulingEnabled;
     }
 
     public Instant getScheduledTime() {
@@ -107,18 +119,6 @@ public class ExcelTaskData {
 
     public void setCronExpression(String cronExpression) {
         this.cronExpression = cronExpression;
-    }
-
-    public List<String> getErrors() {
-        return errors;
-    }
-
-    public boolean hasErrors() {
-        return !errors.isEmpty();
-    }
-
-    public void addError(String error) {
-        this.errors.add(error);
     }
 }
 

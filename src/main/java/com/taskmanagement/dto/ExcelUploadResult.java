@@ -1,42 +1,40 @@
 package com.taskmanagement.dto;
 
-import com.taskmanagement.enums.TaskType;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-
+import java.util.ArrayList;
 import java.util.List;
 
-@Data
-@Builder
-@NoArgsConstructor
-@AllArgsConstructor
 public class ExcelUploadResult {
 
     private boolean success;
-    private String message;
-    private int rowCount;
-    private String staffId;  // 上传用户
-    private List<TemplateTaskDTO> tasks;
-    private List<String> errors;
+    private List<ExcelTaskData> tasks = new ArrayList<>();
+    private List<String> errors = new ArrayList<>();
 
-    public static ExcelUploadResult success(String message, List<TemplateTaskDTO> tasks, int rowCount, String staffId) {
-        return ExcelUploadResult.builder()
-                .success(true)
-                .message(message)
-                .tasks(tasks)
-                .rowCount(rowCount)
-                .staffId(staffId)
-                .build();
+    public boolean isSuccess() {
+        return success;
     }
 
-    public static ExcelUploadResult error(String message, List<String> errors, String staffId) {
-        return ExcelUploadResult.builder()
-                .success(false)
-                .message(message)
-                .errors(errors)
-                .staffId(staffId)
-                .build();
+    public void setSuccess(boolean success) {
+        this.success = success;
+    }
+
+    public List<ExcelTaskData> getTasks() {
+        return tasks;
+    }
+
+    public void setTasks(List<ExcelTaskData> tasks) {
+        this.tasks = tasks;
+    }
+
+    public List<String> getErrors() {
+        return errors;
+    }
+
+    public void setErrors(List<String> errors) {
+        this.errors = errors;
+    }
+
+    public void addError(String error) {
+        this.errors.add(error);
     }
 }
+

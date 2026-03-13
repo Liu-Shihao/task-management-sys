@@ -1,6 +1,6 @@
 package com.taskmanagement.enums;
 
-public enum TaskStatus {
+public enum RundownStatus {
     PENDING,
     IN_PROGRESS,
     COMPLETED,

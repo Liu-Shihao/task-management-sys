@@ -1,4 +1,3 @@
-这份图片包含了五个 Jira 用户故事（User Stories）及其验收标准（Acceptance Criteria）。以下是为您提取的文字内容：
 
 ---
 
@@ -73,3 +72,12 @@
 4. Given an automation script fails, when the task status is updated to 'Failed', then any error messages or logs from the script are accessible from the task in FinBlock.
 
 ---
+
+
+## 技术栈
+
+- 使用SpringBoot开发
+- Java21
+- Maven
+- H2(内存数据库)
+- JPA

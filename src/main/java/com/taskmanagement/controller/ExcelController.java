@@ -1,81 +1,44 @@
 package com.taskmanagement.controller;
 
 import com.taskmanagement.dto.ExcelUploadResult;
-import com.taskmanagement.service.EasyExcelService;
 import com.taskmanagement.service.ExcelService;
-import com.taskmanagement.service.UploadLogService;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.util.HashMap;
-import java.util.Map;
-
-@Slf4j
 @RestController
 @RequestMapping("/api/excel")
-@RequiredArgsConstructor
 public class ExcelController {
 
     private final ExcelService excelService;
-    private final EasyExcelService easyExcelService;
-    private final UploadLogService uploadLogService;
 
-    /**
-     * 使用 Apache POI 解析 Excel
-     */
-    @PostMapping("/upload")
-    public ResponseEntity<Map<String, Object>> uploadExcel(
-            @RequestParam("file") MultipartFile file,
-            @RequestParam(value = "staffId", required = false) String staffId) {
-        log.info("[POI] Received Excel upload request: {}, size: {} bytes, staffId: {}", 
-                file.getOriginalFilename(), file.getSize(), staffId);
-        
-        ExcelUploadResult result = excelService.parseExcelFile(file, staffId);
-        
-        // 记录上传日志
-        uploadLogService.logUpload(file, "POI", result);
-        
-        return buildResponse(result);
+    public ExcelController(ExcelService excelService) {
+        this.excelService = excelService;
     }
 
     /**
-     * 使用 Alibaba EasyExcel 解析 Excel
+     * User Story 1: Excel File Upload
+     *
+     * 支持上传 .xlsx / .xls 文件，解析为 Rundown Task，并区分：
+     * - IMMEDIATE：立即执行（仅保存为待执行状态，不启用调度）
+     * - ONCE：单次调度执行
+     * - CRON：周期调度执行
      */
-    @PostMapping("/upload/easyexcel")
-    public ResponseEntity<Map<String, Object>> uploadExcelEasyExcel(
-            @RequestParam("file") MultipartFile file,
-            @RequestParam(value = "staffId", required = false) String staffId) {
-        log.info("[EasyExcel] Received Excel upload request: {}, size: {} bytes, staffId: {}", 
-                file.getOriginalFilename(), file.getSize(), staffId);
-        
-        ExcelUploadResult result = easyExcelService.parseExcelFile(file, staffId);
-        
-        // 记录上传日志
-        uploadLogService.logUpload(file, "EasyExcel", result);
-        
-        return buildResponse(result);
-    }
-
-    private ResponseEntity<Map<String, Object>> buildResponse(ExcelUploadResult result) {
-        Map<String, Object> response = new HashMap<>();
-        response.put("success", result.isSuccess());
-        response.put("message", result.getMessage());
-        
+    @PostMapping(
+            path = "/upload",
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE,
+            produces = MediaType.APPLICATION_JSON_VALUE
+    )
+    public ResponseEntity<ExcelUploadResult> uploadExcel(@RequestParam("file") MultipartFile file) {
+        ExcelUploadResult result = excelService.uploadAndParse(file);
         if (result.isSuccess()) {
-            response.put("rowCount", result.getRowCount());
-            response.put("staffId", result.getUsername());
-            response.put("tasks", result.getTasks());
-        } else {
-            response.put("errors", result.getErrors());
+            return ResponseEntity.ok(result);
         }
-        
-        if (result.isSuccess()) {
-            return ResponseEntity.ok(response);
-        } else {
-            return ResponseEntity.badRequest().body(response);
-        }
+        return ResponseEntity.badRequest().body(result);
     }
 }
+
