@@ -7,6 +7,7 @@ import com.taskmanagement.entity.UploadLog;
 import com.taskmanagement.enums.TaskStatus;
 import com.taskmanagement.enums.TaskType;
 import com.taskmanagement.enums.UploadStatus;
+import com.taskmanagement.exception.BusinessException;
 import com.taskmanagement.repository.TaskRepository;
 import com.taskmanagement.repository.UploadLogRepository;
 import com.taskmanagement.service.ExcelService;
@@ -59,14 +60,6 @@ public class ExcelServiceImpl implements ExcelService {
     private static final DateTimeFormatter DATE_TIME_FORMATTER =
             DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
-    private final TaskRepository taskRepository;
-    private final UploadLogRepository uploadLogRepository;
-
-    public ExcelServiceImpl(TaskRepository taskRepository, UploadLogRepository uploadLogRepository) {
-        this.taskRepository = taskRepository;
-        this.uploadLogRepository = uploadLogRepository;
-    }
-
     // 允许的文件扩展名
     private static final String[] ALLOWED_EXTENSIONS = {".xlsx", ".xls"};
 
@@ -76,6 +69,14 @@ public class ExcelServiceImpl implements ExcelService {
             "application/vnd.ms-excel"                                           // xls
     };
 
+    private final TaskRepository taskRepository;
+    private final UploadLogRepository uploadLogRepository;
+
+    public ExcelServiceImpl(TaskRepository taskRepository, UploadLogRepository uploadLogRepository) {
+        this.taskRepository = taskRepository;
+        this.uploadLogRepository = uploadLogRepository;
+    }
+
     @Override
     @Transactional
     public ExcelUploadResult uploadAndParse(MultipartFile file) {
@@ -83,42 +84,22 @@ public class ExcelServiceImpl implements ExcelService {
         UploadLog uploadLog = new UploadLog();
         uploadLog.setFileName(file.getOriginalFilename());
 
-        //校验文件格式
+        // 校验文件格式
         String filename = file.getOriginalFilename();
         if (filename == null || filename.isEmpty()) {
-            String msg = "File name is required.";
-            result.addError(msg);
-            uploadLog.setStatus(UploadStatus.FAILED);
-            uploadLog.setErrorMessage(msg);
-            uploadLogRepository.save(uploadLog);
-            return result;
+            throw new BusinessException("File name is required.");
         }
 
         if (!isValidExtension(filename)) {
-            String msg = "Invalid file extension. Allowed extensions: .xlsx, .xls";
-            result.addError(msg);
-            uploadLog.setStatus(UploadStatus.FAILED);
-            uploadLog.setErrorMessage(msg);
-            uploadLogRepository.save(uploadLog);
-            return result;
+            throw new BusinessException("Invalid file extension. Allowed extensions: .xlsx, .xls");
         }
 
         if (!isValidContentType(file.getContentType())) {
-            String msg = "Invalid file type. Allowed MIME types: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel";
-            result.addError(msg);
-            uploadLog.setStatus(UploadStatus.FAILED);
-            uploadLog.setErrorMessage(msg);
-            uploadLogRepository.save(uploadLog);
-            return result;
+            throw new BusinessException("Invalid file type. Allowed MIME types: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel");
         }
 
         if (file.isEmpty()) {
-            String msg = "Uploaded file is empty.";
-            result.addError(msg);
-            uploadLog.setStatus(UploadStatus.FAILED);
-            uploadLog.setErrorMessage(msg);
-            uploadLogRepository.save(uploadLog);
-            return result;
+            throw new BusinessException("Uploaded file is empty.");
         }
 
         List<ExcelTaskData> rows = new ArrayList<>();
@@ -126,12 +107,7 @@ public class ExcelServiceImpl implements ExcelService {
         try (InputStream is = file.getInputStream(); Workbook workbook = WorkbookFactory.create(is)) {
             Sheet sheet = workbook.getSheetAt(0);
             if (sheet == null) {
-                String msg = "Excel sheet is empty.";
-                result.addError(msg);
-                uploadLog.setStatus(UploadStatus.FAILED);
-                uploadLog.setErrorMessage(msg);
-                uploadLogRepository.save(uploadLog);
-                return result;
+                throw new BusinessException("Excel sheet is empty.");
             }
 
             // 从第 2 行开始（索引 1），跳过表头
@@ -143,13 +119,10 @@ public class ExcelServiceImpl implements ExcelService {
                 ExcelTaskData data = parseRow(rowIndex + 1, row); // 显示给用户的行号从 1 开始
                 rows.add(data);
             }
+        } catch (BusinessException e) {
+            throw e;
         } catch (Exception e) {
-            String msg = "Failed to parse Excel file: " + e.getMessage();
-            result.addError(msg);
-            uploadLog.setStatus(UploadStatus.FAILED);
-            uploadLog.setErrorMessage(msg);
-            uploadLogRepository.save(uploadLog);
-            return result;
+            throw new BusinessException("Failed to parse Excel file: " + e.getMessage());
         }
 
         boolean hasRowErrors = rows.stream().anyMatch(ExcelTaskData::hasErrors);
@@ -350,4 +323,3 @@ public class ExcelServiceImpl implements ExcelService {
         return false;
     }
 }
-

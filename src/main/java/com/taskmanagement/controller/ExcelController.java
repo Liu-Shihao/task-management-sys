@@ -23,10 +23,10 @@ public class ExcelController {
     /**
      * User Story 1: Excel File Upload
      *
-     * 支持上传 .xlsx / .xls 文件，解析为 Rundown Task，并区分：
-     * - IMMEDIATE：立即执行（仅保存为待执行状态，不启用调度）
-     * - ONCE：单次调度执行
-     * - CRON：周期调度执行
+     * Supports uploading .xlsx / .xls files, parses them as Rundown Task, and categorizes:
+     * - IMMEDIATE: Execute immediately (saved as pending, no scheduling enabled)
+     * - ONCE: Single scheduled execution
+     * - CRON: Cron-based scheduled execution
      */
     @PostMapping(
             path = "/upload",
@@ -41,4 +41,3 @@ public class ExcelController {
         return ResponseEntity.badRequest().body(result);
     }
 }
-
