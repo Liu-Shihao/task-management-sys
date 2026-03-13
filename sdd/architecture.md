@@ -1,356 +1,390 @@
-# FinBlock 任务管理系统 - 系统架构设计
+# 任务管理系统 - 系统架构设计
 
-## 1. 架构总览
+**版本**: 1.0  
+**生成日期**: 2026-03-13  
+**文档类型**: 系统架构设计说明书  
 
-FinBlock 任务管理系统采用**分层架构 (Layered Architecture)**，基于 Spring Boot 构建 RESTful API 服务，通过集成 Jenkins 和 Ansible 实现自动化部署能力。
+---
 
-```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                           客户端层 (Clients)                            │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐     │
-│  │   Web UI    │  │   Mobile    │  │   API       │  │  Scheduler  │     │
-│  │  (Future)   │  │  (Future)   │  │  Consumer   │  │   (Cron)    │     │
-│  └─────────────┘  └─────────────┘  └─────────────┘  └─────────────┘     │
-└─────────────────────────────────────────────────────────────────────────┘
-                                    │
-                                    ▼
-┌─────────────────────────────────────────────────────────────────────────┐
-│                        API 网关层 (API Gateway)                         │
-│                    (Spring Boot REST Controllers)                        │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐     │
-│  │ExcelController│ │TemplateCtrl│ │RundownCtrl │ │PipelineCtrl │     │
-│  └─────────────┘  └─────────────┘  └─────────────┘  └─────────────┘     │
-└─────────────────────────────────────────────────────────────────────────┘
-                                    │
-                                    ▼
-┌─────────────────────────────────────────────────────────────────────────┐
-│                         服务层 (Service Layer)                           │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐     │
-│  │ExcelService │  │TemplateSvc  │  │RundownSvc   │  │PipelineSvc  │     │
-│  │  - 解析Excel │  │  - CRUD    │  │  - CRUD    │  │  - 串行执行 │     │
-│  │  - 数据校验 │  │  - 克隆     │  │  - 状态管理│  │  - 失败处理 │     │
-│  └─────────────┘  └─────────────┘  └─────────────┘  └─────────────┘     │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐                     │
-│  │TaskService  │  │ScheduleSvc  │  │ExecutorSvc  │                     │
-│  │  - CRUD    │  │  - 定时调度  │  │  - Jenkins │                     │
-│  │  - 状态管理│  │  - Cron解析  │  │  - Ansible │                     │
-│  └─────────────┘  └─────────────┘  └─────────────┘                     │
-└─────────────────────────────────────────────────────────────────────────┘
-                                    │
-                                    ▼
-┌─────────────────────────────────────────────────────────────────────────┐
-│                      集成层 (Integration Layer)                          │
-│  ┌─────────────────────────┐  ┌─────────────────────────┐             │
-│  │    Jenkins Client       │  │    Ansible Client        │             │
-│  │  - 触发 Pipeline Job   │  │  - 触发 Job             │             │
-│  │  - 获取构建状态        │  │  - 获取执行状态          │             │
-│  └─────────────────────────┘  └─────────────────────────┘             │
-└─────────────────────────────────────────────────────────────────────────┘
-                                    │
-                                    ▼
-┌─────────────────────────────────────────────────────────────────────────┐
-│                      数据访问层 (Repository Layer)                       │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐     │
-│  │TemplateRepo │  │ RundownRepo │  │  TaskRepo   │  │ScheduleRepo │     │
-│  └─────────────┘  └─────────────┘  └─────────────┘  └─────────────┘     │
-└─────────────────────────────────────────────────────────────────────────┘
-                                    │
-                                    ▼
-┌─────────────────────────────────────────────────────────────────────────┐
-│                        数据存储层 (Data Layer)                          │
-│  ┌─────────────────────────┐  ┌─────────────────────────┐             │
-│  │    PostgreSQL           │  │    H2 (Dev Only)        │             │
-│  │    (Production)         │  │                         │             │
-│  └─────────────────────────┘  └─────────────────────────┘             │
-└─────────────────────────────────────────────────────────────────────────┘
-```
+## 1. 系统概述
 
-## 2. 技术栈选型
+### 1.1 项目定位
 
-| 分类 | 选型 | 理由 |
-|------|------|------|
-| **后端框架** | Spring Boot 3.x | 成熟稳定，生态丰富，社区活跃 |
-| **构建工具** | Maven | Java 标准构建工具，与 Spring 深度集成 |
-| **数据库** | PostgreSQL | 企业级关系型数据库，支持复杂查询 |
-| **开发数据库** | H2 | 内存数据库，开发环境快速启动 |
-| **持久层框架** | Spring Data JPA | 简化数据库操作，自动生成 SQL |
-| **定时任务** | Spring Scheduler / Quartz | 原生支持，无需额外依赖 |
-| **Excel 处理** | Apache POI | 功能强大的 Office 文档处理库 |
-| **外部集成** | Jenkins REST API | 标准化接口，支持 Pipeline 触发 |
-| **外部集成** | Ansible Tower API | 标准化接口，支持 Job 触发 |
-| **API 文档** | Swagger / OpenAPI 3.0 | 自动生成 API 文档，便于调试 |
-| **日志** | SLF4J + Logback | Spring 默认日志框架 |
+任务管理系统（Task Management System）是一个类 Harness CI/CD 的部署任务管理平台，用于简化部署任务的创建、管理和执行流程。通过提供 Excel 导入、模板管理、多任务顺序执行等功能，帮助运维/部署人员实现多环境链式部署（SIT → UAT → PROD）。
 
-## 3. 组件图 (PlantUML)
+### 1.2 系统边界
+
+| 类别 | 包含 | 不包含 |
+|------|------|--------|
+| **核心功能** | Excel 导入、模板管理、Rundown 管理、任务执行、定时调度、批量执行 | 用户权限管理 SSO、任务日志分析、第三方集成 |
+| **自动化** | Jenkins、Ansible | GitHub Actions、Terraform |
+| **用户** | 部署运营人员 | 开发者、访客 |
+
+---
+
+## 2. 技术架构
+
+### 2.1 技术栈
+
+| 层级 | 技术选型 | 版本 |
+|------|----------|------|
+| **开发语言** | Java | 21 |
+| **后端框架** | Spring Boot | 3.x |
+| **ORM** | JPA (Hibernate) | 6.x |
+| **数据库** | MySQL | 8.x |
+| **构建工具** | Maven | 3.9+ |
+| **API 文档** | SpringDoc OpenAPI | 2.3.0 |
+| **Excel 处理** | Apache POI | 5.2.5 |
+| **安全** | Spring Security | 6.x |
+
+### 2.2 系统拓扑
 
 ```plantuml
 @startuml
-left to right direction
+!theme plain
 skinparam componentStyle uml2
-skinparam backgroundColor #FEFEFE
 
-package "客户端层" {
-  [Web Client] as WC
-  [API Consumer] as AC
-  [Scheduler] as SC
+actor "用户" as User
+
+package "Web 层" {
+    [Web Frontend] as Frontend
 }
 
-package "API 网关层" {
-  [Excel Controller] as EC
-  [Template Controller] as TC
-  [Rundown Controller] as RC
-  [Task Controller] as KTC
-  [Pipeline Controller] as PC
-  [Schedule Controller] as SCC
+package "API 层" {
+    [API Gateway] as APIGateway
+    [REST Controllers] as Controllers
 }
 
-package "服务层" {
-  [Excel Service] as ES
-  [Template Service] as TS
-  [Rundown Service] as RS
-  [Task Service] as KS
-  [Pipeline Service] as PS
-  [Schedule Service] as SS
-  [Executor Service] as EXS
+package "业务层" {
+    [导入服务] as ImportService
+    [模板服务] as TemplateService
+    [Rundown服务] as RundownService
+    [任务服务] as TaskService
+    [执行服务] as ExecutorService
+    [调度服务] as SchedulerService
+    [批量执行服务] as BatchService
 }
 
 package "集成层" {
-  [Jenkins Client] as JC
-  [Ansible Client] as AC2
+    [Jenkins 客户端] as JenkinsClient
+    [Ansible 客户端] as AnsibleClient
 }
 
-package "数据访问层" {
-  [Template Repository] as TR
-  [Rundown Repository] as RR
-  [Task Repository] as KR
-  [Schedule Repository] as SR
+package "数据层" {
+    [JPA Repository] as Repositories
+    [MySQL Database] as Database
 }
 
-database "PostgreSQL" as DB
-database "H2 (Dev)" as H2DB
+User --> Frontend
+Frontend --> APIGateway
+APIGateway --> Controllers
 
-' Relationships
-EC --> ES
-TC --> TS
-RC --> RS
-KTC --> KS
-PC --> PS
-SCC --> SS
+Controllers --> ImportService
+Controllers --> TemplateService
+Controllers --> RundownService
+Controllers --> TaskService
+Controllers --> ExecutorService
+Controllers --> SchedulerService
+Controllers --> BatchService
 
-ES --> TR
-TS --> TR
-RS --> RR
-KS --> KR
-PS --> KS
-KS --> RR
-SS --> SR
+ImportService --> Repositories
+TemplateService --> Repositories
+RundownService --> Repositories
+TaskService --> Repositories
+ExecutorService --> Repositories
+SchedulerService --> Repositories
+BatchService --> Repositories
 
-TR --> DB
-RR --> DB
-KR --> DB
-SR --> DB
-TR --> H2DB
-RR --> H2DB
-KR --> H2DB
-SR --> H2DB
+ExecutorService --> JenkinsClient
+ExecutorService --> AnsibleClient
 
-EXS --> JC : HTTP REST
-EXS --> AC2 : HTTP REST
+JenkinsClient --> Jenkins
+AnsibleClient --> AWX
 
-KS ..> EXS : 调用
-PS ..> KS : 任务编排
-
-SC --> SCC : Cron 触发
+Repositories --> Database
 
 @enduml
 ```
 
-## 4. 核心数据流
+---
 
-### 4.1 Excel 导入流程
+## 3. 模块设计
 
-```
-用户上传 Excel 
-    ↓
-ExcelController.upload()
-    ↓
-ExcelService.parseExcel() → Apache POI 解析
-    ↓
-ExcelService.validateData() → 数据完整性校验
-    ↓
-生成 Task 列表
-    ↓
-返回预览数据给前端
-```
+### 3.1 核心模块
 
-### 4.2 Pipeline 执行流程
+| 模块 | 包路径 | 职责 | 关键技术 |
+|------|--------|------|----------|
+| **导入模块** | `com.taskman.import` | Excel 解析、数据验证 | Apache POI |
+| **模板管理** | `com.taskman.template` | 模板 CRUD、克隆、生成 Rundown | JPA |
+| **Rundown 管理** | `com.taskman.rundown` | 清单管理、顺序控制 | JPA + 事务 |
+| **任务控制** | `com.taskman.task` | 任务 CRUD、状态管理 | JPA |
+| **执行服务** | `com.taskman.executor` | Jenkins/Ansible 集成 | REST API |
+| **调度服务** | `com.taskman.scheduler` | 定时/Cron 调度 (Rundown 内置) | @Scheduled |
+| **批量执行** | `com.taskman.batch` | 并发执行、进度聚合 | @Async + ThreadPool |
 
-```
-用户触发 Pipeline
-    ↓
-PipelineController.execute()
-    ↓
-PipelineService.executePipeline()
-    ↓
-遍历任务列表，顺序执行:
-    ↓
-TaskService.executeTask()
-    ↓
-ExecutorService.triggerJenkins() / triggerAnsible()
-    ↓
-等待外部系统回调或轮询状态
-    ↓
-更新任务状态 (RUNNING / SUCCESS / FAILED)
-    ↓
-前置任务成功 → 继续执行下一任务
-    前置任务失败 → 终止 Pipeline
-```
+### 3.2 模块依赖关系
 
-### 4.3 定时任务流程
+```plantuml
+@startuml
+!theme plain
 
-```
-Scheduler 创建定时任务
-    ↓
-Spring Scheduler 按 Cron 触发
-    ↓
-ScheduleService.executeScheduledTask()
-    ↓
-根据任务类型调用:
-    - TaskService.executeTask() (单个任务)
-    - PipelineService.executePipeline() (Pipeline)
-    - RundownBatchService.executeBatch() (批量执行)
-```
+package "com.taskman" {
+    [controller] <<M>>
+    [service] <<M>>
+    [repository] <<M>>
+    [entity] <<M>>
+    [dto] <<M>>
+    [exception] <<M>>
+    [util] <<M>>
+}
 
-## 5. 模块设计
-
-### 5.1 Excel 导入模块
-
-| 类 | 职责 |
-|----|------|
-| `ExcelController` | 处理 Excel 上传请求 |
-| `ExcelService` | 解析 Excel、校验数据、生成任务 |
-| `ExcelParser` | 封装 Apache POI 解析逻辑 |
-| `ExcelValidator` | 数据完整性校验 |
-
-### 5.2 模板管理模块
-
-| 类 | 职责 |
-|----|------|
-| `TemplateController` | CRUD API |
-| `TemplateService` | 模板业务逻辑、克隆功能 |
-| `TemplateRepository` | 数据持久化 |
-
-### 5.3 Rundown 模块
-
-| 类 | 职责 |
-|----|------|
-| `RundownController` | Rundown API |
-| `RundownService` | Rundown 生成、状态管理 |
-| `RundownRepository` | 数据持久化 |
-
-### 5.4 Pipeline 执行模块
-
-| 类 | 职责 |
-|----|------|
-| `PipelineController` | Pipeline API |
-| `PipelineService` | 任务编排、顺序执行、失败处理 |
-| `PipelineExecutor` | 执行策略（串行/并行 TBD） |
-
-### 5.5 调度模块
-
-| 类 | 职责 |
-|----|------|
-| `ScheduleController` | 定时任务 CRUD API |
-| `ScheduleService` | 定时调度逻辑、Cron 解析 |
-| `SchedulerJob` | Spring Scheduler Job 实现 |
-
-### 5.6 执行器模块
-
-| 类 | 职责 |
-|----|------|
-| `ExecutorService` | 统一执行入口 |
-| `JenkinsClient` | Jenkins REST API 封装 |
-| `AnsibleClient` | Ansible Tower API 封装 |
-| `ExecutionCallback` | 外部回调处理 |
-
-## 6. 扩展性设计
-
-### 6.1 批量并发执行
-
-- 使用 `CompletableFuture` 实现多 Rundown 并发执行
-- 配置线程池大小（建议 20+ 根据需求）
-- 单个 Rundown 失败不影响其他执行
-
-### 6.2 外部系统容错
-
-- Jenkins/Ansible 调用失败自动重试 3 次
-- 使用 Circuit Breaker 模式防止雪崩
-- 失败任务记录详细日志便于排查
-
-### 6.3 数据库扩展
-
-- 使用连接池 (HikariCP) 管理连接
-- 索引优化：task_id, rundown_id, status
-- 考虑读写分离（V2.0）
-
-## 7. 安全性设计
-
-### 7.1 认证授权
-
-- V1.0: 基础认证 (Basic Auth)
-- API Token 认证 (Jenkins/Ansible)
-- 请求参数校验防止注入
-
-### 7.2 文件上传安全
-
-- 限制文件大小 ≤ 10MB
-- 文件类型白名单 (.xlsx, .xls)
-- 上传目录隔离，禁止执行权限
-
-### 7.3 日志审计
-
-- 关键操作记录日志 (INFO)
-- 异常场景记录详细堆栈 (ERROR)
-- 外部调用记录请求/响应日志
-
-## 8. 目录结构
-
-```
-src/main/java/com/finblock/task/
-├── controller/
-│   ├── ExcelController.java
-│   ├── TemplateController.java
-│   ├── RundownController.java
-│   ├── TaskController.java
-│   ├── PipelineController.java
-│   └── ScheduleController.java
-├── service/
-│   ├── ExcelService.java
-│   ├── TemplateService.java
-│   ├── RundownService.java
-│   ├── TaskService.java
-│   ├── PipelineService.java
-│   ├── ScheduleService.java
-│   └── ExecutorService.java
-├── repository/
-│   ├── TemplateRepository.java
-│   ├── RundownRepository.java
-│   ├── TaskRepository.java
-│   └── ScheduleRepository.java
-├── integration/
-│   ├── JenkinsClient.java
-│   └── AnsibleClient.java
-├── model/
-│   ├── entity/
-│   └── dto/
-├── config/
-│   ├── SecurityConfig.java
-│   ├── JpaConfig.java
-│   └── SchedulerConfig.java
-└── TaskManagementApplication.java
+[controller] --> [service]
+[controller] --> [dto]
+[service] --> [repository]
+[service] --> [entity]
+[service] --> [dto]
+[service] --> [exception]
+[repository] --> [entity]
+[dto] --> [entity]
+[exception] --> [dto]
+[util] --> [service]
+@enduml
 ```
 
 ---
 
-*本文档由 SDD Architecture Designer 自动生成*
-*基于 spec.md v1.1 生成*
+## 4. 数据流设计
+
+### 4.1 核心数据流
+
+```plantuml
+@startuml
+!theme plain
+
+actor User
+
+participant "Controller" as C
+participant "Service" as S
+participant "Repository" as R
+participant "Executor" as E
+participant "MySQL" as DB
+participant "Jenkins" as J
+participant "Ansible" as A
+
+== Excel 导入流程 ==
+
+User -> C: 上传 Excel 文件
+C -> S: parseExcel(file)
+S -> S: validateFormat()
+S -> S: parseWithPOI()
+S -> S: validateData()
+S -> R: saveTasks()
+R -> DB: INSERT
+DB --> R
+R --> S
+S --> C
+C --> User: 返回解析结果
+
+== Rundown 执行流程 ==
+
+User -> C: 执行 Rundown
+C -> S: executeRundown(id)
+S -> R: getTasks(rundownId)
+R -> DB: SELECT
+DB --> R
+R --> S
+S -> E: execute(task1)
+E -> J: triggerJob()
+J --> E: buildNumber
+E --> S: SUCCESS
+S -> E: execute(task2)
+E -> A: triggerPlaybook()
+A --> E: jobId
+E --> S: SUCCESS
+S -> R: updateStatus()
+R -> DB: UPDATE
+S --> C
+C --> User: 执行完成
+
+@enduml
+```
+
+---
+
+## 5. 部署架构
+
+### 5.1 生产环境部署
+
+```plantuml
+@startuml
+!theme plain
+
+node "负载均衡层" {
+    [Nginx] as LB
+}
+
+node "应用服务器" {
+    [Spring Boot JAR] as App1
+    [Spring Boot JAR] as App2
+}
+
+node "数据库层" {
+    [MySQL Master] as MySQL_M
+    [MySQL Slave] as MySQL_S
+}
+
+node "外部系统" {
+    [Jenkins Server] as Jenkins
+    [Ansible Tower/AWX] as AWX
+}
+
+LB --> App1
+LB --> App2
+App1 --> MySQL_M
+App2 --> MySQL_M
+MySQL_M --> MySQL_S
+App1 --> Jenkins
+App2 --> Jenkins
+App1 --> AWX
+App2 --> AWX
+@enduml
+```
+
+### 5.2 部署配置
+
+| 环境 | 部署方式 | 数据库 | 特点 |
+|------|----------|--------|------|
+| 开发 | IDE 运行 | MySQL 本地 | 调试方便 |
+| 测试 | Docker Compose | MySQL 容器 | 快速启动 |
+| 生产 | JAR 部署 / Docker | MySQL 主从 | 高可用 |
+
+---
+
+## 6. 安全架构
+
+### 6.1 认证授权
+
+```plantuml
+@startuml
+!theme plain
+
+actor User
+
+package "Spring Security" {
+    [Filter Chain] as Filter
+    [Authentication Manager] as AuthMgr
+    [User Details Service] as UserDetails
+    [Password Encoder] as Encoder
+}
+
+User -> Filter: 请求
+Filter -> AuthMgr: 认证请求
+AuthMgr -> UserDetails: 加载用户
+UserDetails -> Encoder: 验证密码
+Encoder --> UserDetails
+UserDetails --> AuthMgr
+AuthMgr --> Filter: 认证结果
+Filter --> User: 响应
+@enduml
+```
+
+### 6.2 安全措施
+
+| 层级 | 措施 |
+|------|------|
+| **认证** | Spring Security Session-based |
+| **密码** | BCrypt 哈希 |
+| **敏感数据** | AES-256 加密存储 (Jenkins Token、Ansible 凭据) |
+| **日志** | 禁止打印明文密码/Token |
+| **输入** | @Valid + JSR-303 校验 |
+
+---
+
+## 7. 性能与高可用
+
+### 7.1 性能优化
+
+| 优化点 | 方案 |
+|--------|------|
+| **数据库连接** | HikariCP 连接池 |
+| **异步执行** | @Async + ThreadPoolTaskExecutor |
+| **查询优化** | @EntityGraph 避免 N+1 |
+| **索引** | 合理设计复合索引 |
+| **缓存** | Spring Cache (Caffeine) |
+
+### 7.2 高可用设计
+
+| 组件 | 高可用方案 |
+|------|------------|
+| 应用服务器 | 多实例 + 负载均衡 |
+| 数据库 | MySQL 主从复制 |
+| 定时任务 | 分布式锁 (未来扩展) |
+
+---
+
+## 8. 接口设计
+
+### 8.1 API 分层
+
+```plantuml
+@startuml
+!theme plain
+
+package "API Layer" {
+    [REST Controller] as RC
+    [Request DTO] as ReqDTO
+    [Response DTO] as ResDTO
+}
+
+package "Service Layer" {
+    [Business Service] as BS
+}
+
+package "Data Layer" {
+    [JPA Entity] as Entity
+    [Repository] as Repo
+}
+
+RC --> ReqDTO: 接收请求
+ReqDTO --> BS: 业务处理
+BS --> Repo: 数据访问
+Repo --> Entity: ORM 映射
+Entity --> Repo
+Repo --> BS
+BS --> ResDTO
+ResDTO --> RC: 返回响应
+@enduml
+```
+
+### 8.2 OpenAPI 集成
+
+SpringDoc 自动生成 API 文档，访问地址：`/swagger-ui.html`
+
+---
+
+## 9. 技术选型理由
+
+| 技术 | 选型理由 |
+|------|----------|
+| **Java 21** | LTS 版本，性能提升，新特性支持 |
+| **Spring Boot** | 生态成熟，自动配置，快速开发 |
+| **JPA/Hibernate** | ORM 标准，数据库无关，事务管理 |
+| **MySQL** | 轻量易用，社区成熟，满足需求 |
+| **Apache POI** | 官方 Excel 库，稳定可靠 |
+| **SpringDoc** | 注解驱动，自动生成 OpenAPI 文档 |
+
+---
+
+## 10. 未来扩展
+
+| 方向 | 方案 |
+|------|------|
+| 权限管理 | Spring Security + JWT |
+| 分布式调度 | XXL-JOB |
+| 实时推送 | WebSocket |
+| 日志分析 | Elasticsearch + Kibana |
+| 插件化 | 策略模式 + 动态加载 |
+
+---
+
+*本文档由 Architecture Designer 自动生成*

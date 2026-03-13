@@ -1,7 +1,98 @@
-server:
-  port: 8080
+# Task Management System - Application Configuration
 
+# ==================== DEFAULT (H2 Dev) ====================
 spring:
   application:
     name: task-management-sys
+  
+  # H2 Console for development
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+  
+  # JPA Settings
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.H2Dialect
+    open-in-view: false
+  
+  # SQL Init
+  sql:
+    init:
+      mode: always
+  
+  # File Upload
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
 
+# Server
+server:
+  port: 8080
+
+# Logging
+logging:
+  level:
+    root: INFO
+    com.taskmanagement: DEBUG
+    org.springframework.web: INFO
+    org.hibernate.SQL: DEBUG
+
+# ==================== PRODUCTION ====================
+# Activate with: spring.profiles.active=prod
+---
+spring:
+  config:
+    activate:
+      on-profile: prod
+  
+  # MySQL Database
+  datasource:
+    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:taskman}?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true&createDatabaseIfNotExist=true
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    username: ${DB_USERNAME:taskman}
+    password: ${DB_PASSWORD:taskman}
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+      idle-timeout: 300000
+      connection-timeout: 20000
+      max-lifetime: 1200000
+  
+  # JPA
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQLDialect
+  
+  # Disable H2 Console
+  h2:
+    console:
+      enabled: false
+  
+  # SQL Init disabled in prod
+  sql:
+    init:
+      mode: never
+
+# Server
+server:
+  port: ${SERVER_PORT:8080}
+
+# Logging
+logging:
+  level:
+    root: INFO
+    com.taskmanagement: INFO
+    org.springframework.web: WARN
+    org.hibernate: WARN

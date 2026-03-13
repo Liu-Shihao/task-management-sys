@@ -1,0 +1,1321 @@
+openapi: 3.0.3
+info:
+  title: 任务管理系统 API
+  description: |
+    任务管理系统后端 API 文档
+    
+    核心功能：
+    - Excel 导入任务数据
+    - 模板管理
+    - Rundown 发布清单管理
+    - 任务执行控制
+    - Jenkins/Ansible 自动化集成
+    - 定时任务调度
+    - 批量执行
+  version: 1.0.0
+  contact:
+    name: API Support
+
+servers:
+  - url: http://localhost:8000/api/v1
+    description: 本地开发服务器
+  - url: http://{host}:{port}/api/v1
+    description: 生产服务器
+    variables:
+      host:
+        default: localhost
+      port:
+        default: "8000"
+
+tags:
+  - name: Auth
+    description: 认证相关接口
+  - name: Import
+    description: 数据导入接口
+  - name: Templates
+    description: 模板管理接口
+  - name: Rundowns
+    description: Rundown 管理接口
+  - name: Tasks
+    description: 任务控制接口
+  - name: Execution
+    description: 任务执行接口
+  - name: Scheduling
+    description: 定时任务接口
+  - name: Config
+    description: 系统配置接口
+
+paths:
+  # ==================== Auth ====================
+  /auth/login:
+    post:
+      tags:
+        - Auth
+      summary: 用户登录
+      operationId: login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - username
+                - password
+              properties:
+                username:
+                  type: string
+                  description: 用户名
+                password:
+                  type: string
+                  description: 密码
+      responses:
+        '200':
+          description: 登录成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '401':
+          description: 用户名或密码错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/logout:
+    post:
+      tags:
+        - Auth
+      summary: 用户登出
+      operationId: logout
+      security:
+        - CookieAuth: []
+      responses:
+        '200':
+          description: 登出成功
+
+  # ==================== Import ====================
+  /import/upload:
+    post:
+      tags:
+        - Import
+      summary: 上传并解析 Excel 文件
+      operationId: uploadExcel
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: Excel 文件 (.xlsx, .xls)
+      responses:
+        '200':
+          description: 解析成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImportResult'
+        '400':
+          description: 文件格式错误或解析失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /import/validate:
+    post:
+      tags:
+        - Import
+      summary: 验证解析后的数据
+      operationId: validateImportData
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - data
+              properties:
+                data:
+                  type: array
+                  items:
+                    type: object
+      responses:
+        '200':
+          description: 验证结果
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationResult'
+
+  # ==================== Templates ====================
+  /templates:
+    get:
+      tags:
+        - Templates
+      summary: 获取模板列表
+      operationId: listTemplates
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: page_size
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: 模板列表
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedTemplates'
+
+    post:
+      tags:
+        - Templates
+      summary: 创建新模板
+      operationId: createTemplate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTemplateRequest'
+      responses:
+        '201':
+          description: 创建成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Template'
+
+  /templates/{template_id}:
+    get:
+      tags:
+        - Templates
+      summary: 获取模板详情
+      operationId: getTemplate
+      parameters:
+        - name: template_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: 模板详情
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TemplateDetail'
+
+    put:
+      tags:
+        - Templates
+      summary: 更新模板
+      operationId: updateTemplate
+      parameters:
+        - name: template_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTemplateRequest'
+      responses:
+        '200':
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Template'
+
+    delete:
+      tags:
+        - Templates
+      summary: 删除模板
+      operationId: deleteTemplate
+      parameters:
+        - name: template_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: 删除成功
+
+  /templates/{template_id}/clone:
+    post:
+      tags:
+        - Templates
+      summary: 克隆模板
+      operationId: cloneTemplate
+      parameters:
+        - name: template_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                new_name:
+                  type: string
+      responses:
+        '201':
+          description: 克隆成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Template'
+
+  /templates/{template_id}/generate-rundown:
+    post:
+      tags:
+        - Templates
+      summary: 从模板生成 Rundown
+      operationId: generateRundown
+      parameters:
+        - name: template_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenerateRundownRequest'
+      responses:
+        '201':
+          description: 生成成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Rundown'
+
+  # ==================== Rundowns ====================
+  /rundowns:
+    get:
+      tags:
+        - Rundowns
+      summary: 获取 Rundown 列表
+      operationId: listRundowns
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: page_size
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, running, partial_success, success, aborted, failed]
+        - name: template_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Rundown 列表
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedRundowns'
+
+    post:
+      tags:
+        - Rundowns
+      summary: 创建空白 Rundown
+      operationId: createRundown
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateRundownRequest'
+      responses:
+        '201':
+          description: 创建成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Rundown'
+
+  /rundowns/{rundown_id}:
+    get:
+      tags:
+        - Rundowns
+      summary: 获取 Rundown 详情
+      operationId: getRundown
+      parameters:
+        - name: rundown_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Rundown 详情
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RundownDetail'
+
+    put:
+      tags:
+        - Rundowns
+      summary: 更新 Rundown
+      operationId: updateRundown
+      parameters:
+        - name: rundown_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateRundownRequest'
+      responses:
+        '200':
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Rundown'
+
+    delete:
+      tags:
+        - Rundowns
+      summary: 删除 Rundown
+      operationId: deleteRundown
+      parameters:
+        - name: rundown_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: 删除成功
+
+  /rundowns/{rundown_id}/execute:
+    post:
+      tags:
+        - Execution
+      summary: 执行 Rundown
+      operationId: executeRundown
+      parameters:
+        - name: rundown_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '202':
+          description: 开始执行
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExecutionResponse'
+
+  /rundowns/batch-execute:
+    post:
+      tags:
+        - Execution
+      summary: 批量执行 Rundown
+      operationId: batchExecuteRundowns
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - rundown_ids
+              properties:
+                rundown_ids:
+                  type: array
+                  items:
+                    type: string
+                    format: uuid
+      responses:
+        '202':
+          description: 开始批量执行
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BatchExecutionResponse'
+
+  # ==================== Tasks ====================
+  /rundowns/{rundown_id}/tasks:
+    get:
+      tags:
+        - Tasks
+      summary: 获取 Rundown 下的任务列表
+      operationId: listTasks
+      parameters:
+        - name: rundown_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: 任务列表
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Task'
+
+    post:
+      tags:
+        - Tasks
+      summary: 添加任务到 Rundown
+      operationId: addTask
+      parameters:
+        - name: rundown_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTaskRequest'
+      responses:
+        '201':
+          description: 添加成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+
+  /tasks/{task_id}:
+    get:
+      tags:
+        - Tasks
+      summary: 获取任务详情
+      operationId: getTask
+      parameters:
+        - name: task_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: 任务详情
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskDetail'
+
+    put:
+      tags:
+        - Tasks
+      summary: 更新任务
+      operationId: updateTask
+      parameters:
+        - name: task_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTaskRequest'
+      responses:
+        '200':
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+
+    delete:
+      tags:
+        - Tasks
+      summary: 删除任务
+      operationId: deleteTask
+      parameters:
+        - name: task_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: 删除成功
+
+  /tasks/{task_id}/execute:
+    post:
+      tags:
+        - Execution
+      summary: 执行单个任务
+      operationId: executeTask
+      parameters:
+        - name: task_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '202':
+          description: 开始执行
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExecutionResponse'
+
+  /tasks/{task_id}/reorder:
+    put:
+      tags:
+        - Tasks
+      summary: 调整任务顺序
+      operationId: reorderTasks
+      parameters:
+        - name: rundown_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - task_ids
+              properties:
+                task_ids:
+                  type: array
+                  items:
+                    type: string
+                    format: uuid
+                  description: 按顺序排列的任务ID列表
+      responses:
+        '200':
+          description: 排序更新成功
+
+  # ==================== Scheduling ====================
+  /schedules:
+    get:
+      tags:
+        - Scheduling
+      summary: 获取定时任务列表
+      operationId: listSchedules
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: page_size
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [scheduled, running, completed, cancelled]
+      responses:
+        '200':
+          description: 定时任务列表
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedSchedules'
+
+    post:
+      tags:
+        - Scheduling
+      summary: 创建定时任务
+      operationId: createSchedule
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateScheduleRequest'
+      responses:
+        '201':
+          description: 创建成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScheduledTask'
+
+  /schedules/{schedule_id}:
+    get:
+      tags:
+        - Scheduling
+      summary: 获取定时任务详情
+      operationId: getSchedule
+      parameters:
+        - name: schedule_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: 定时任务详情
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScheduledTask'
+
+    put:
+      tags:
+        - Scheduling
+      summary: 更新定时任务
+      operationId: updateSchedule
+      parameters:
+        - name: schedule_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateScheduleRequest'
+      responses:
+        '200':
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScheduledTask'
+
+    delete:
+      tags:
+        - Scheduling
+      summary: 删除定时任务
+      operationId: deleteSchedule
+      parameters:
+        - name: schedule_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: 删除成功
+
+  /schedules/{schedule_id}/run:
+    post:
+      tags:
+        - Scheduling
+      summary: 立即执行定时任务
+      operationId: runScheduleNow
+      parameters:
+        - name: schedule_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '202':
+          description: 开始执行
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExecutionResponse'
+
+  # ==================== Config ====================
+  /config:
+    get:
+      tags:
+        - Config
+      summary: 获取系统配置列表
+      operationId: listConfig
+      responses:
+        '200':
+          description: 配置列表
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SystemConfig'
+
+    post:
+      tags:
+        - Config
+      summary: 创建/更新系统配置
+      operationId: setConfig
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SetConfigRequest'
+      responses:
+        '200':
+          description: 设置成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SystemConfig'
+
+# ==================== Components ====================
+components:
+  securitySchemes:
+    CookieAuth:
+      type: apiKey
+      in: cookie
+      name: session_id
+
+  schemas:
+    # Auth
+    LoginResponse:
+      type: object
+      properties:
+        user:
+          $ref: '#/components/schemas/User'
+        message:
+          type: string
+
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        username:
+          type: string
+        display_name:
+          type: string
+        role:
+          type: string
+
+    # Import
+    ImportResult:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: array
+          items:
+            type: object
+        total_rows:
+          type: integer
+
+    ValidationResult:
+      type: object
+      properties:
+        valid:
+          type: boolean
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              row:
+                type: integer
+              field:
+                type: string
+              message:
+                type: string
+
+    # Templates
+    PaginatedTemplates:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Template'
+        total:
+          type: integer
+        page:
+          type: integer
+        page_size:
+          type: integer
+
+    Template:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        created_by:
+          type: string
+          format: uuid
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    TemplateDetail:
+      allOf:
+        - $ref: '#/components/schemas/Template'
+        - type: object
+          properties:
+            tasks:
+              type: array
+              items:
+                $ref: '#/components/schemas/TemplateTask'
+
+    TemplateTask:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        task_type:
+          type: string
+          enum: [jenkins, ansible]
+        config:
+          type: object
+        order_index:
+          type: integer
+
+    CreateTemplateRequest:
+      type: object
+      required:
+        - name
+        - tasks
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        tasks:
+          type: array
+          items:
+            $ref: '#/components/schemas/TemplateTask'
+
+    UpdateTemplateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        tasks:
+          type: array
+          items:
+            $ref: '#/components/schemas/TemplateTask'
+
+    GenerateRundownRequest:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+
+    # Rundowns
+    PaginatedRundowns:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Rundown'
+        total:
+          type: integer
+        page:
+          type: integer
+        page_size:
+          type: integer
+
+    Rundown:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        rundown_code:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        template_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [pending, running, partial_success, success, aborted, failed]
+        created_by:
+          type: string
+          format: uuid
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        started_at:
+          type: string
+          format: date-time
+        finished_at:
+          type: string
+          format: date-time
+
+    RundownDetail:
+      allOf:
+        - $ref: '#/components/schemas/Rundown'
+        - type: object
+          properties:
+            tasks:
+              type: array
+              items:
+                $ref: '#/components/schemas/Task'
+
+    CreateRundownRequest:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+
+    UpdateRundownRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+
+    # Tasks
+    Task:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        rundown_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        task_type:
+          type: string
+          enum: [jenkins, ansible]
+        config:
+          type: object
+        order_index:
+          type: integer
+        status:
+          type: string
+          enum: [pending, running, success, failed, aborted, timeout]
+        external_id:
+          type: string
+        external_url:
+          type: string
+        error_message:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        started_at:
+          type: string
+          format: date-time
+        finished_at:
+          type: string
+          format: date-time
+
+    TaskDetail:
+      allOf:
+        - $ref: '#/components/schemas/Task'
+        - type: object
+          properties:
+            execution_logs:
+              type: array
+              items:
+                $ref: '#/components/schemas/ExecutionLog'
+
+    CreateTaskRequest:
+      type: object
+      required:
+        - name
+        - task_type
+        - config
+      properties:
+        name:
+          type: string
+        task_type:
+          type: string
+          enum: [jenkins, ansible]
+        config:
+          type: object
+        order_index:
+          type: integer
+
+    UpdateTaskRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        task_type:
+          type: string
+          enum: [jenkins, ansible]
+        config:
+          type: object
+
+    ExecutionLog:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        task_id:
+          type: string
+          format: uuid
+        execution_id:
+          type: string
+        status:
+          type: string
+        output:
+          type: string
+        error_output:
+          type: string
+        duration_ms:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+
+    # Execution
+    ExecutionResponse:
+      type: object
+      properties:
+        execution_id:
+          type: string
+        message:
+          type: string
+
+    BatchExecutionResponse:
+      type: object
+      properties:
+        batch_id:
+          type: string
+        total:
+          type: integer
+        message:
+          type: string
+
+    # Scheduling
+    PaginatedSchedules:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ScheduledTask'
+        total:
+          type: integer
+        page:
+          type: integer
+        page_size:
+          type: integer
+
+    ScheduledTask:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        target_type:
+          type: string
+          enum: [task, rundown]
+        target_id:
+          type: string
+          format: uuid
+        schedule_type:
+          type: string
+          enum: [once, cron]
+        cron_expression:
+          type: string
+        run_time:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [scheduled, running, completed, cancelled]
+        created_by:
+          type: string
+          format: uuid
+        created_at:
+          type: string
+          format: date-time
+        next_run_time:
+          type: string
+          format: date-time
+
+    CreateScheduleRequest:
+      type: object
+      required:
+        - target_type
+        - target_id
+        - schedule_type
+      properties:
+        target_type:
+          type: string
+          enum: [task, rundown]
+        target_id:
+          type: string
+          format: uuid
+        schedule_type:
+          type: string
+          enum: [once, cron]
+        run_time:
+          type: string
+          format: date-time
+        cron_expression:
+          type: string
+
+    UpdateScheduleRequest:
+      type: object
+      properties:
+        run_time:
+          type: string
+          format: date-time
+        cron_expression:
+          type: string
+        status:
+          type: string
+          enum: [scheduled, cancelled]
+
+    # Config
+    SystemConfig:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        config_key:
+          type: string
+        value_type:
+          type: string
+        description:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    SetConfigRequest:
+      type: object
+      required:
+        - config_key
+        - config_value
+      properties:
+        config_key:
+          type: string
+        config_value:
+          type: string
+        value_type:
+          type: string
+          default: string
+        description:
+          type: string
+
+    # Error
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            details:
+              type: array
+              items:
+                type: object
+                properties:
+                  field:
+                    type: string
+                  message:
+                    type: string
