@@ -1,20 +1,10 @@
 package com.taskmanagement.executor;
 
 import com.taskmanagement.entity.Task;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import lombok.*;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.slf4j.Logger;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.slf4j.LoggerFactory;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
+
 import java.time.LocalDateTime;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Execution result DTO
@@ -24,8 +14,8 @@ import org.slf4j.LoggerFactory;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@Slf4j
 public class ExecutionResult {
-    private static final Logger log = LoggerFactory.getLogger(ExecutionResult.class);
 
     private boolean success;
     private String message;

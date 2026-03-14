@@ -1,31 +1,16 @@
 package com.taskmanagement.controller;
 
 import com.taskmanagement.dto.response.ApiResponse;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import com.taskmanagement.entity.SystemConfig;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import com.taskmanagement.service.SystemConfigService;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import lombok.RequiredArgsConstructor;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 
 import org.springframework.http.ResponseEntity;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.annotation.*;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.List;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import java.util.Map;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * System configuration controller
@@ -34,8 +19,8 @@ import org.slf4j.LoggerFactory;
 @RestController
 @RequestMapping("/api/v1/config")
 @RequiredArgsConstructor
+@Slf4j
 public class ConfigController {
-    private static final Logger log = LoggerFactory.getLogger(ConfigController.class);
 
     private final SystemConfigService configService;
 

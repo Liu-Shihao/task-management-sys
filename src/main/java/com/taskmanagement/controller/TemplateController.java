@@ -1,52 +1,23 @@
 package com.taskmanagement.controller;
 
 import com.taskmanagement.dto.request.CreateTemplateRequest;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import com.taskmanagement.dto.request.GenerateRundownRequest;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import com.taskmanagement.dto.response.ApiResponse;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import com.taskmanagement.dto.response.RundownResponse;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import com.taskmanagement.dto.response.TemplateResponse;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import com.taskmanagement.service.TemplateService;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import jakarta.validation.Valid;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import lombok.RequiredArgsConstructor;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 
 import org.springframework.data.domain.Page;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Pageable;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.data.web.PageableDefault;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.annotation.*;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.Map;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Template management controller
@@ -55,8 +26,8 @@ import org.slf4j.LoggerFactory;
 @RestController
 @RequestMapping("/api/v1/templates")
 @RequiredArgsConstructor
+@Slf4j
 public class TemplateController {
-    private static final Logger log = LoggerFactory.getLogger(TemplateController.class);
 
     private final TemplateService templateService;
 

@@ -1,49 +1,21 @@
 package com.taskmanagement.service;
 
 import com.taskmanagement.dto.response.RundownResponse;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import com.taskmanagement.entity.Rundown;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import com.taskmanagement.entity.Task;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import com.taskmanagement.executor.ExecutionResult;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import com.taskmanagement.executor.ExecutorFactory;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import com.taskmanagement.executor.TaskStatus;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import com.taskmanagement.repository.RundownRepository;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import com.taskmanagement.repository.TaskRepository;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import lombok.RequiredArgsConstructor;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.transaction.annotation.Transactional;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.time.LocalDateTime;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import java.util.List;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Rundown execution service
@@ -51,8 +23,8 @@ import org.slf4j.LoggerFactory;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class ExecutionService {
-    private static final Logger log = LoggerFactory.getLogger(ExecutionService.class);
 
     private final RundownRepository rundownRepository;
     private final TaskRepository taskRepository;

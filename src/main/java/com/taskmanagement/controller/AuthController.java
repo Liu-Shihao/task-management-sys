@@ -1,25 +1,14 @@
 package com.taskmanagement.controller;
 
 import com.taskmanagement.dto.request.LoginRequest;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import com.taskmanagement.dto.response.ApiResponse;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import lombok.RequiredArgsConstructor;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 
 import org.springframework.http.ResponseEntity;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.annotation.*;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.Map;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Authentication controller
@@ -28,8 +17,8 @@ import org.slf4j.LoggerFactory;
 @RestController
 @RequestMapping("/api/v1/auth")
 @RequiredArgsConstructor
+@Slf4j
 public class AuthController {
-    private static final Logger log = LoggerFactory.getLogger(AuthController.class);
 
     /**
      * Health check endpoint
@@ -46,7 +35,7 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<ApiResponse<Map<String, Object>>> login(@RequestBody LoginRequest request) {
         log.info("Login attempt for user: {}", request.getUsername());
-        
+
         // Simplified login response - implement full auth in production
         Map<String, Object> data = Map.of(
                 "userId", 1L,
@@ -54,7 +43,7 @@ public class AuthController {
                 "role", "user",
                 "token", "demo-token-" + System.currentTimeMillis()
         );
-        
+
         return ResponseEntity.ok(ApiResponse.success("Login successful", data));
     }
 

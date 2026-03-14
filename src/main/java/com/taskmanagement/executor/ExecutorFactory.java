@@ -1,23 +1,17 @@
 package com.taskmanagement.executor;
 
 import com.taskmanagement.entity.Task;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import lombok.RequiredArgsConstructor;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Factory for creating task executors based on task type
  */
 @Component
 @RequiredArgsConstructor
-
+@Slf4j
 public class ExecutorFactory {
-    private static final Logger log = LoggerFactory.getLogger(ExecutorFactory.class);
 
     private final JenkinsExecutor jenkinsExecutor;
     private final AnsibleExecutor ansibleExecutor;
@@ -48,7 +42,7 @@ public class ExecutorFactory {
         if (task.getExternalId() == null || task.getExternalId().isEmpty()) {
             return TaskStatus.builder().status(task.getStatus()).build();
         }
-        
+
         TaskExecutor executor = getExecutor(task.getTaskType());
         return executor.getStatus(task.getExternalId());
     }
@@ -60,7 +54,7 @@ public class ExecutorFactory {
         if (task.getExternalId() == null || task.getExternalId().isEmpty()) {
             return false;
         }
-        
+
         TaskExecutor executor = getExecutor(task.getTaskType());
         return executor.cancel(task.getExternalId());
     }
@@ -72,7 +66,7 @@ public class ExecutorFactory {
         if (task.getExternalId() == null || task.getExternalId().isEmpty()) {
             return "";
         }
-        
+
         TaskExecutor executor = getExecutor(task.getTaskType());
         return executor.getLogs(task.getExternalId());
     }

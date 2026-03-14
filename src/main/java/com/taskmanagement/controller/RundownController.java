@@ -1,17 +1,10 @@
 package com.taskmanagement.controller;
 
 import com.taskmanagement.dto.response.ApiResponse;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import com.taskmanagement.dto.response.RundownResponse;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import com.taskmanagement.service.RundownService;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import lombok.RequiredArgsConstructor;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -29,8 +22,8 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/v1/rundowns")
 @RequiredArgsConstructor
+@Slf4j
 public class RundownController {
-    private static final Logger log = LoggerFactory.getLogger(RundownController.class);
 
     private final RundownService rundownService;
 

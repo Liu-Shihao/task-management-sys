@@ -8,8 +8,7 @@ import com.taskmanagement.exception.BusinessException;
 import com.taskmanagement.repository.RundownRepository;
 import com.taskmanagement.repository.TaskRepository;
 import lombok.RequiredArgsConstructor;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -23,9 +22,8 @@ import java.util.stream.Collectors;
  */
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class RundownService {
-    
-    private static final Logger log = LoggerFactory.getLogger(RundownService.class);
 
     private final RundownRepository rundownRepository;
     private final TaskRepository taskRepository;
@@ -169,15 +167,15 @@ public class RundownService {
     // Helper methods
     private String generateRundownCode() {
         String prefix = "RD-" + java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd")) + "-";
-        
+
         String maxCode = rundownRepository.findMaxRundownCodeByPrefix(prefix).orElse(null);
-        
+
         int nextNum = 1;
         if (maxCode != null) {
             String numStr = maxCode.substring(prefix.length());
             nextNum = Integer.parseInt(numStr) + 1;
         }
-        
+
         return prefix + String.format("%03d", nextNum);
     }
 
