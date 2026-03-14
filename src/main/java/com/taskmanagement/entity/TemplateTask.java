@@ -1,16 +1,19 @@
 package com.taskmanagement.entity;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import lombok.*;
 import java.time.LocalDateTime;
+import java.util.Map;
 
 /**
  * TemplateTask entity - task configuration within a template
  */
 @Entity
 @Table(name = "template_tasks")
-@Getter
-@Setter
+@Data
+
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
@@ -33,8 +36,9 @@ public class TemplateTask {
     @Column(name = "order_index", nullable = false)
     private Integer orderIndex;
 
-    @Column(columnDefinition = "TEXT")
-    private String config;  // JSON configuration
+    @Column(columnDefinition = "JSON")
+    @JdbcTypeCode(SqlTypes.JSON)
+    private Map<String, Object> config;  // JSON configuration
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;

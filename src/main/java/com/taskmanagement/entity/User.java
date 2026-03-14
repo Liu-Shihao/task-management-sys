@@ -9,8 +9,7 @@ import java.time.LocalDateTime;
  */
 @Entity
 @Table(name = "users")
-@Getter
-@Setter
+@Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
@@ -23,13 +22,18 @@ public class User {
     @Column(nullable = false, unique = true, length = 50)
     private String username;
 
-    @Column(nullable = false)
-    private String password;
+    @Column(name = "password_hash", nullable = false)
+    private String passwordHash;
 
-    @Column(length = 50)
-    private String role = "USER";
+    @Column(name = "display_name", length = 100)
+    private String displayName;
+
+    @Column(nullable = false, length = 20)
+    @Builder.Default
+    private String role = "user";
 
     @Column(nullable = false)
+    @Builder.Default
     private boolean enabled = true;
 
     @Column(name = "created_at", nullable = false, updatable = false)

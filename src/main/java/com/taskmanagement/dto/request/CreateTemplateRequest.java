@@ -3,6 +3,7 @@ package com.taskmanagement.dto.request;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.Size;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Create template request DTO
@@ -30,7 +31,7 @@ public class CreateTemplateRequest {
         private String name;
         private String taskType;
         private Integer orderIndex;
-        private String config;
+        private Map<String, Object> config;
 
         public String getName() { return name; }
         public void setName(String name) { this.name = name; }
@@ -41,7 +42,7 @@ public class CreateTemplateRequest {
         public Integer getOrderIndex() { return orderIndex; }
         public void setOrderIndex(Integer orderIndex) { this.orderIndex = orderIndex; }
 
-        public String getConfig() { return config; }
-        public void setConfig(String config) { this.config = config; }
+        public Map<String, Object> getConfig() { return config; }
+        public void setConfig(Map<String, Object> config) { this.config = config; }
     }
 }

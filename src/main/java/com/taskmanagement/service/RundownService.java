@@ -1,54 +1,30 @@
 package com.taskmanagement.service;
 
 import com.taskmanagement.dto.response.RundownResponse;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.taskmanagement.dto.response.TaskResponse;
 import com.taskmanagement.entity.Rundown;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import com.taskmanagement.entity.Task;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import com.taskmanagement.exception.BusinessException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import com.taskmanagement.repository.RundownRepository;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import com.taskmanagement.repository.TaskRepository;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.springframework.data.domain.Page;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Pageable;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.transaction.annotation.Transactional;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.List;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import java.util.stream.Collectors;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Rundown management service
  */
-
 @Service
 @RequiredArgsConstructor
 public class RundownService {
+    
     private static final Logger log = LoggerFactory.getLogger(RundownService.class);
 
     private final RundownRepository rundownRepository;
@@ -173,20 +149,21 @@ public class RundownService {
     public RundownResponse reorderTasks(Long rundownId, List<Long> taskIds) {
         log.info("Reordering tasks for rundown: {}", rundownId);
 
-        Rundown rundown = rundownRepository.findById(rundownId)
+        final Rundown rundown = rundownRepository.findById(rundownId)
                 .orElseThrow(() -> new BusinessException.ResourceNotFoundException("Rundown", rundownId));
 
         // Update order index based on taskIds order
         for (int i = 0; i < taskIds.size(); i++) {
             final int order = i;
+            final Long taskId = taskIds.get(i);
             rundown.getTasks().stream()
-                    .filter(t -> t.getId().equals(taskIds.get(i)))
+                    .filter(t -> t.getId().equals(taskId))
                     .findFirst()
                     .ifPresent(t -> t.setOrderIndex(order));
         }
 
-        rundown = rundownRepository.save(rundown);
-        return toResponse(rundown);
+        Rundown savedRundown = rundownRepository.save(rundown);
+        return toResponse(savedRundown);
     }
 
     // Helper methods
@@ -205,8 +182,8 @@ public class RundownService {
     }
 
     private RundownResponse toResponse(Rundown rundown) {
-        List<RundownResponse.TaskResponse> tasks = rundown.getTasks().stream()
-                .map(task -> RundownResponse.TaskResponse.builder()
+        List<TaskResponse> tasks = rundown.getTasks().stream()
+                .map(task -> TaskResponse.builder()
                         .id(task.getId())
                         .name(task.getName())
                         .taskType(task.getTaskType())

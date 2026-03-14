@@ -71,19 +71,19 @@
 
 | 模块 | 包路径 | 职责 | 主要类 |
 |------|--------|------|--------|
-| **导入模块** | `com.taskman.import` | Excel 文件上传、解析、数据验证 | `ExcelParser`, `DataValidator`, `ImportService` |
-| **模板管理模块** | `com.taskman.template` | 模板 CRUD、克隆、从模板生成 Rundown | `TemplateService`, `TemplateController`, `TemplateRepository` |
-| **Rundown 管理模块** | `com.taskman.rundown` | Rundown CRUD、任务顺序管理、执行控制 | `RundownService`, `RundownExecutor`, `RundownController` |
-| **任务控制模块** | `com.taskman.task` | 任务 CRUD、状态管理 | `TaskService`, `TaskController`, `TaskRepository` |
-| **自动化执行模块** | `com.taskman.executor` | Jenkins/Ansible 集成、状态同步 | `ExecutorFactory`, `JenkinsExecutor`, `AnsibleExecutor`, `StatusSyncService` |
-| **调度服务** | `com.taskman.scheduler` | 定时调度 (Rundown 内置) | @Scheduled |
-| **批量执行模块** | `com.taskman.batch` | 多 Rundown 并发执行、进度聚合 | `BatchExecutor`, `ExecutionAggregator` |
-| **系统配置模块** | `com.taskman.config` | 系统配置管理 | `SystemConfigService`, `EncryptionUtil` |
+| **导入模块** | `com.taskmanagement` | Excel 文件上传、解析、数据验证 | `ExcelParser`, `ImportController`, `ExcelParserService` |
+| **模板管理模块** | `com.taskmanagement` | 模板 CRUD、克隆、从模板生成 Rundown | `TemplateService`, `TemplateController`, `TemplateRepository` |
+| **Rundown 管理模块** | `com.taskmanagement` | Rundown CRUD、任务顺序管理、执行控制 | `RundownService`, `RundownController` |
+| **任务控制模块** | `com.taskmanagement` | 任务 CRUD、状态管理 | `TaskService`, `TaskController`, `TaskRepository` |
+| **自动化执行模块** | `com.taskmanagement.executor` | Jenkins/Ansible 集成、状态同步 | `ExecutorFactory`, `JenkinsExecutor`, `AnsibleExecutor`, `ExecutionService` |
+| **调度服务** | `com.taskmanagement.service` | 定时调度 (Rundown 内置) | `SchedulerService`, @Scheduled |
+| **批量执行模块** | `com.taskmanagement.service` | 多 Rundown 并发执行、进度聚合 | `ExecutionService`, `RundownService` |
+| **系统配置模块** | `com.taskmanagement` | 系统配置管理 | `SystemConfigService`, `EncryptionUtil` |
 
 ### 2.2 目录结构
 
 ```
-src/main/java/com/taskman/
+src/main/java/com/taskmanagement/
 ├── TaskManagementApplication.java
 ├── config/
 │   ├── SecurityConfig.java
@@ -95,7 +95,6 @@ src/main/java/com/taskman/
 │   ├── TemplateController.java
 │   ├── RundownController.java
 │   ├── TaskController.java
-│   ├── ScheduleController.java
 │   └── ConfigController.java
 ├── service/
 │   ├── import/
@@ -109,15 +108,13 @@ src/main/java/com/taskman/
 │   ├── UserRepository.java
 │   ├── TemplateRepository.java
 │   ├── TaskRepository.java
-│   ├── RundownRepository.java
-│   └── ScheduledTaskRepository.java
+│   └── RundownRepository.java
 ├── entity/
 │   ├── User.java
 │   ├── Template.java
 │   ├── TemplateTask.java
 │   ├── Rundown.java
 │   ├── Task.java
-│   ├── ScheduledTask.java
 │   ├── ExecutionLog.java
 │   └── SystemConfig.java
 ├── dto/
@@ -200,7 +197,7 @@ public class SchedulerService {
     }
 }
 
-### 2.4 Rundown 执行模块详细设计
+### 2.5 Rundown 执行模块详细设计
 
 ```java
 @Service
@@ -695,7 +692,7 @@ spring:
 ```yaml
 logging:
   level:
-    com.taskman: INFO
+    com.taskmanagement: INFO
     org.springframework: WARN
     org.hibernate: WARN
   pattern:

@@ -1,42 +1,22 @@
 package com.taskmanagement.executor;
 
 import com.taskmanagement.entity.Task;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.net.URI;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import java.net.http.HttpClient;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import java.net.http.HttpRequest;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import java.net.http.HttpResponse;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import java.time.Duration;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import java.util.Base64;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import java.util.Map;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Ansible (AWX/Tower) task executor implementation
  */
-
+@Slf4j
 @Component
 public class AnsibleExecutor implements TaskExecutor {
 
@@ -60,6 +40,7 @@ public class AnsibleExecutor implements TaskExecutor {
         try {
             Map<String, Object> config = task.getConfig();
             String playbook = (String) config.get("playbook");
+            @SuppressWarnings("unchecked")
             Map<String, Object> extraVars = (Map<String, Object>) config.get("extra_vars");
             Integer jobTemplateId = (Integer) config.get("jobTemplateId");
 
@@ -80,9 +61,6 @@ public class AnsibleExecutor implements TaskExecutor {
                 requestBody = String.format("{\"extra_vars\": %s}", extraVars);
             }
 
-            // Build request
-            String encodedToken = Base64.getEncoder().encodeToString(("Bearer:" + awxToken).getBytes());
-
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create(url))
                     .header("Authorization", "Bearer " + awxToken)
@@ -96,8 +74,13 @@ public class AnsibleExecutor implements TaskExecutor {
             if (response.statusCode() == 201 || response.statusCode() == 200) {
                 // Parse response to get job ID
                 String jobId = extractJobId(response.body());
-                String externalUrl = awxUrl + "/api/v2/jobs/" + jobId + "/";
-                return ExecutionResult.success(jobId, externalUrl, null);
+                
+                // Build success result using builder
+                return ExecutionResult.builder()
+                        .success(true)
+                        .message("Ansible job triggered successfully")
+                        .externalId(jobId)
+                        .build();
             } else {
                 log.error("Ansible AWX job trigger failed: {}", response.body());
                 return ExecutionResult.failed("AWX trigger failed: " + response.statusCode());
@@ -128,13 +111,10 @@ public class AnsibleExecutor implements TaskExecutor {
             if (response.statusCode() == 200) {
                 // Parse JSON to get status
                 String status = parseStatus(response.body());
-                String output = parseOutput(response.body());
 
                 return TaskStatus.builder()
                         .status(mapAnsibleStatus(status))
-                        .externalId(executionId)
                         .externalUrl(awxUrl + "/api/v2/jobs/" + executionId + "/")
-                        .output(output)
                         .build();
             }
 
@@ -200,7 +180,7 @@ public class AnsibleExecutor implements TaskExecutor {
             int start = responseBody.indexOf("\"id\":");
             if (start > 0) {
                 int end = responseBody.indexOf(",", start);
-                return responseBody.substring(start + 4, end).trim();
+                return responseBody.substring(start + 5, end).trim();
             }
         } catch (Exception e) {
             // ignore
@@ -219,11 +199,6 @@ public class AnsibleExecutor implements TaskExecutor {
             // ignore
         }
         return "unknown";
-    }
-
-    private String parseOutput(String responseBody) {
-        // Simplified - would need to fetch stdout separately
-        return "";
     }
 
     private String mapAnsibleStatus(String awxStatus) {

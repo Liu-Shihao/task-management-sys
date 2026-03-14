@@ -36,7 +36,7 @@
 
 | ID | 任务 | 优先级 | 依赖 | 并行 | 预估 | 状态 |
 |----|------|--------|------|------|------|------|
-| T010 | 配置 JPA + MySQL 数据源，HikariCP 连接池 | P0 | T002 | T011 | 2h | ✅ |
+| T010 | 配置 JPA 数据源（H2/MySQL 多环境），HikariCP 连接池 | P0 | T002 | T011 | 2h | ✅ |
 | T011 | 创建 JPA Entity: User, Template, TemplateTask | P0 | T002 | T010 | 4h | ✅ |
 | T012 | 创建 JPA Entity: Rundown, Task | P0 | T011 | T013 | 4h | ✅ |
 | T013 | 创建 JPA Entity: ExecutionLog, SystemConfig | P0 | T011 | T012 | 3h | ✅ |
@@ -159,8 +159,8 @@
 
 ## 阶段五：定时任务调度 (Phase 5)
 
-**预估工期**: 0.5 周  
-**目标**: 完成 Rundown 内置定时调度功能
+**预估工期**: 0.5 周
+**目标**: 完成 Rundown 内置定时调度功能（无独立调度 REST API）
 
 ### 5.1 调度服务 (Rundown 内置)
 
@@ -171,8 +171,12 @@
 | T092 | 实现一次性定时执行 (schedule_once) | P0 | T091 | - | 2h |
 | T093 | 实现 Cron 周期性执行 (schedule_cron) | P0 | T091 | - | 2h |
 | T094 | 实现定时任务查询 (按 next_run_time) | P1 | T092 | - | 1h |
-| T095 | 创建 ScheduleController REST API | P1 | T093 | - | 2h |
-| T096 | 实现定时任务管理 (查看、编辑、取消) | P1 | T095 | - | 2h |
+| T095 | SchedulerService 配置和测试 | P0 | T094 | - | 2h |
+
+**说明**：
+- 定时执行通过 SchedulerService 的 `@Scheduled` 注解自动执行，无需外部 REST API 调用
+- Rundown 通过 `schedule_type`、`cron_expression`、`run_time`、`schedule_status`、`next_run_time`、`last_run_at` 字段支持定时
+- 调度逻辑：每分钟检查 `schedule_type IN (once, cron)` 且 `schedule_status = 'scheduled'` 且 `next_run_time <= now` 的 Rundown，自动执行并更新状态
 
 ---
 

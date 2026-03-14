@@ -190,9 +190,9 @@
 | 类别 | 说明 |
 |------|------|
 | 开发环境 | 本地开发环境需可访问真实 Jenkins 和 Ansible，或配置 Mock 服务 |
-| 技术栈 | 待确认（建议：后端 Python FastAPI 或 Java Spring Boot，前端 Vue 3 或 React） |
+| 技术栈 | Java 21、Spring Boot 3.x、Maven、JPA；前端可选 Vue 3 或 React |
 | 外部依赖 | Jenkins (≥ 2.x)，Ansible (≥ 2.9) 或 Ansible Tower/AWX |
-| 数据库 | 待确认（建议 MySQL 或 PostgreSQL） |
+| 数据库 | 开发/测试：H2（内存）；生产：MySQL 8.x 或 PostgreSQL |
 
 ### 5.2 假设条件
 
@@ -207,15 +207,13 @@
 
 | 序号 | 待确认项 | 说明 |
 |------|----------|------|
-| TBD-1 | 技术栈选择 | Java / Python / Node.js? |
-| TBD-2 | 前端框架 | Vue 3 / React / Angular? |
-| TBD-3 | 数据库选型 | MySQL / PostgreSQL? |
 | TBD-4 | Jenkins 连接认证方式 | API Token / Username + Password? |
 | TBD-5 | Ansible 执行方式 | 直接 Ansible CLI / AWX API? |
-| TBD-6 | 用户认证方案 | 简单用户名密码 / JWT Token? |
 | TBD-7 | 部署模式 | 本地部署 / Docker / Kubernetes? |
 | TBD-8 | 任务状态同步方式 | 轮询 / Webhook 回调? |
 | TBD-9 | 是否需要回滚功能? | 类似 Harness 的 rollback 能力 |
+
+**已决事项**：技术栈为 Java 21 + Spring Boot；数据库开发用 H2、生产用 MySQL；V1.0 认证为简单用户名+密码（Session）；前端框架可选。
 
 ---
 

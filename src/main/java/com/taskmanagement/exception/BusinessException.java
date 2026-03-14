@@ -34,6 +34,10 @@ public class BusinessException extends RuntimeException {
         public ResourceNotFoundException(String resource, Long id) {
             super("RESOURCE_NOT_FOUND", resource + " not found with id: " + id);
         }
+
+        public ResourceNotFoundException(String resource, String code) {
+            super("RESOURCE_NOT_FOUND", resource + " not found with code: " + code);
+        }
     }
 
     public static class ValidationException extends BusinessException {

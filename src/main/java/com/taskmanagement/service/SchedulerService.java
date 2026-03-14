@@ -145,7 +145,8 @@ public class SchedulerService {
             
             // Calculate next run time
             ExecutionTime executionTime = ExecutionTime.forCron(cron);
-            rundown.setNextRunTime(executionTime.nextExecution(ZonedDateTime.now()).orElse(null));
+            ZonedDateTime nextExecution = executionTime.nextExecution(ZonedDateTime.now()).orElse(null);
+            rundown.setNextRunTime(nextExecution != null ? nextExecution.toLocalDateTime() : null);
 
             rundownRepository.save(rundown);
             
@@ -186,7 +187,8 @@ public class SchedulerService {
             Cron cron = parser.parse(rundown.getCronExpression());
             ExecutionTime executionTime = ExecutionTime.forCron(cron);
             
-            rundown.setNextRunTime(executionTime.nextExecution(ZonedDateTime.now()).orElse(null));
+            ZonedDateTime nextExecution = executionTime.nextExecution(ZonedDateTime.now()).orElse(null);
+            rundown.setNextRunTime(nextExecution != null ? nextExecution.toLocalDateTime() : null);
             
         } catch (Exception e) {
             log.error("Error calculating next run time", e);

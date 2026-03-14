@@ -1,51 +1,25 @@
 package com.taskmanagement.executor;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import com.taskmanagement.entity.Task;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import com.taskmanagement.util.EncryptionUtil;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.net.URI;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import java.net.http.HttpClient;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import java.net.http.HttpRequest;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import java.net.http.HttpResponse;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import java.time.Duration;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import java.util.Base64;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import java.util.Map;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Jenkins task executor implementation
  */
-
+@Slf4j
 @Component
 public class JenkinsExecutor implements TaskExecutor {
 
@@ -73,6 +47,7 @@ public class JenkinsExecutor implements TaskExecutor {
         try {
             Map<String, Object> config = task.getConfig();
             String jobName = (String) config.get("jobName");
+            @SuppressWarnings("unchecked")
             Map<String, String> parameters = (Map<String, String>) config.get("parameters");
 
             if (jobName == null || jobName.isEmpty()) {
@@ -90,7 +65,7 @@ public class JenkinsExecutor implements TaskExecutor {
             if (parameters != null && !parameters.isEmpty()) {
                 requestBody = parameters.entrySet().stream()
                         .map(e -> e.getKey() + "=" + e.getValue())
-                        .reduce((a, b) -> a + "&")
+                        .reduce((a, b) -> a + "&" + b)
                         .orElse("");
             }
 
@@ -114,7 +89,13 @@ public class JenkinsExecutor implements TaskExecutor {
                 String queueId = extractQueueId(queueLocation);
                 
                 String externalUrl = jenkinsUrl + "/job/" + jobName;
-                return ExecutionResult.success(queueId, externalUrl, null);
+                
+                // Build success result using builder
+                return ExecutionResult.builder()
+                        .success(true)
+                        .message("Jenkins job triggered successfully")
+                        .externalId(queueId)
+                        .build();
             } else {
                 log.error("Jenkins job trigger failed: {}", response.body());
                 return ExecutionResult.failed("Jenkins trigger failed: " + response.statusCode());
@@ -135,7 +116,6 @@ public class JenkinsExecutor implements TaskExecutor {
             // In production, need to query Jenkins queue/API for actual status
             return TaskStatus.builder()
                     .status("running")
-                    .externalId(executionId)
                     .externalUrl(jenkinsUrl)
                     .build();
 
@@ -169,7 +149,13 @@ public class JenkinsExecutor implements TaskExecutor {
         // Extract queue ID from URL like: http://jenkins/queue/item/123/
         int lastSlash = queueLocation.lastIndexOf("/");
         if (lastSlash > 0) {
-            return queueLocation.substring(lastSlash - 1);
+            String withoutTrailingSlash = queueLocation.endsWith("/") 
+                ? queueLocation.substring(0, lastSlash) 
+                : queueLocation;
+            int secondLastSlash = withoutTrailingSlash.lastIndexOf("/");
+            if (secondLastSlash > 0) {
+                return withoutTrailingSlash.substring(secondLastSlash + 1);
+            }
         }
         return queueLocation;
     }

@@ -11,8 +11,7 @@ import java.util.List;
  */
 @Entity
 @Table(name = "templates")
-@Getter
-@Setter
+@Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
@@ -39,7 +38,20 @@ public class Template {
 
     @OneToMany(mappedBy = "template", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("orderIndex ASC")
+    @Builder.Default
     private List<TemplateTask> tasks = new ArrayList<>();
+
+    // Helper method to add task
+    public void addTask(TemplateTask task) {
+        tasks.add(task);
+        task.setTemplate(this);
+    }
+
+    // Helper method to remove task
+    public void removeTask(TemplateTask task) {
+        tasks.remove(task);
+        task.setTemplate(null);
+    }
 
     // JPA callbacks
     @PrePersist

@@ -1,24 +1,41 @@
 # 任务管理系统 - 数据模型设计
 
-**版本**: 1.1  
-**生成日期**: 2026-03-13  
-**文档类型**: 数据模型设计说明书  
+**版本**: 1.2
+**生成日期**: 2026-03-14
+**文档类型**: 数据模型设计说明书
 
 ---
 
 ## 1. 实体概述
 
-本系统包含以下核心实体：
+本系统包含以下核心实体。**定时调度由 Rundown 内置字段支持，无独立 ScheduledTask 实体；也无独立的调度 REST API**。
+
+Rundown 通过 `schedule_type`、`cron_expression`、`run_time`、`schedule_status`、`next_run_time`、`last_run_at` 等字段承载一次性/周期定时。定时任务的管理和执行由 SchedulerService 的 `@Scheduled` 注解每分钟自动检查并执行，无需通过 REST API 手动设置。
 
 | 实体 | 说明 | 关联 |
 |------|------|------|
 | User | 用户 | 任务的创建者/执行者 |
 | Template | 模板 | 可生成多个 Rundown |
 | TemplateTask | 模板任务配置 | 属于 Template |
-| Rundown | 发布清单 | 从 Template 生成，包含多个 Task，支持定时执行 |
+| Rundown | 发布清单 | 从 Template 生成，包含多个 Task，**支持内置定时执行（无 ScheduledTask，无独立调度 API）** |
 | Task | 任务 | 属于 Rundown，对应一次执行 |
 | ExecutionLog | 执行日志 | 关联 Task |
 | SystemConfig | 系统配置 | 存储 Jenkins/Ansible 配置 |
+
+### 1.1 定时执行机制说明
+
+- **无独立调度 API**：不提供 `/rundowns/{id}/schedule` 等 REST 接口
+- **内置字段**：Rundown 实体包含定时相关字段（`schedule_type`, `cron_expression`, `run_time`, `schedule_status`, `next_run_time`, `last_run_at`）
+- **自动检查执行**：SchedulerService 使用 `@Scheduled(fixedRate = 60000)` 每分钟检查：
+  - 查询 `schedule_type IN (once, cron)` 且 `schedule_status = 'scheduled'` 且 `next_run_time <= now` 的 Rundown
+  - 自动执行匹配的 Rundown
+  - 根据调度类型更新状态（一次性执行完成后标记为 completed，Cron 计算下次执行时间）
+
+| 定时类型 | 说明 |
+|----------|------|
+| `none` (null) | 不定时，仅手动执行 |
+| `once` | 一次性定时执行，执行后 `schedule_status` 变为 `completed` |
+| `cron` | Cron 周期执行，每次执行后重新计算 `next_run_time` |
 
 ---
 
@@ -96,19 +113,37 @@
 
 | 类型 | 说明 |
 |------|------|
-| null | 无定时，手动执行 |
-| once | 一次性定时执行 |
-| cron | 周期性 Cron 执行 |
+| null | 无定时，仅手动执行 |
+| once | 一次性定时执行，执行后 `schedule_status` 变为 `completed` |
+| cron | Cron 周期执行，每次执行后重新计算 `next_run_time` |
 
 **调度状态 (Rundown.schedule_status)**：
 
 | 状态 | 说明 |
 |------|------|
 | null | 未设置调度 |
-| scheduled | 已调度 |
-| running | 执行中 |
-| completed | 已完成 (一次性) |
+| scheduled | 等待下次执行时间到达 |
+| running | 正在执行中 |
+| completed | 已完成（一次性执行） |
 | cancelled | 已取消 |
+
+**定时执行流程**：
+
+```
+1. 用户通过 API 设置 Rundown 的定时字段（schedule_type, run_time / cron_expression）
+   ↓
+2. SchedulerService 每分钟通过 @Scheduled 检查
+   ↓
+3. 查询条件：schedule_type IN (once, cron)
+             AND schedule_status = 'scheduled'
+             AND next_run_time <= now
+   ↓
+4. 自动执行匹配的 Rundown
+   ↓
+5. 根据类型更新状态：
+   - once: schedule_status = 'completed'
+   - cron: 重新计算 next_run_time
+```
 
 ### 2.5 Task (任务)
 
@@ -180,7 +215,42 @@
 
 ---
 
-## 3. ER 图 (无外键)
+## 4. 定时任务调度器
+
+### 4.1 SchedulerService 设计
+
+定时任务由 `SchedulerService` 负责，通过 Spring 的 `@Scheduled` 注解自动执行，**无需外部调用 REST API**。
+
+**核心方法**：
+
+| 方法 | 说明 |
+|------|------|
+| `checkScheduledRundowns()` | 每分钟执行，检查并触发待执行的 Rundown |
+| `scheduleOnce(rundownId, runTime)` | 设置一次性定时执行（由模板或 Rundown 创建时调用） |
+| `scheduleCron(rundownId, cronExpression)` | 设置 Cron 周期执行（由模板或 Rundown 创建时调用） |
+| `cancelSchedule(rundownId)` | 取消定时执行 |
+| `calculateNextRunTime(rundown)` | 计算 Cron 表达式的下次执行时间 |
+
+**定时检查逻辑**：
+
+```
+1. 每分钟执行一次 @Scheduled 方法
+2. 查询条件：
+   - schedule_type IN (once, cron)
+   - schedule_status = 'scheduled'
+   - next_run_time <= now
+3. 对每个匹配的 Rundown：
+   - 更新 schedule_status = 'running'
+   - 调用 ExecutionService.executeRundown()
+   - 根据 schedule_type 更新状态：
+     * once: schedule_status = 'completed'
+     * cron: 重新计算 next_run_time
+   - 更新 last_run_at
+```
+
+---
+
+## 5. ER 图 (无外键)
 
 ```plantuml
 @startuml

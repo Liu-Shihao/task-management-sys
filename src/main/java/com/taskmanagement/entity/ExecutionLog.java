@@ -9,8 +9,7 @@ import java.time.LocalDateTime;
  */
 @Entity
 @Table(name = "execution_logs")
-@Getter
-@Setter
+@Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
@@ -21,24 +20,23 @@ public class ExecutionLog {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "rundown_id")
-    private Rundown rundown;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "task_id")
+    @JoinColumn(name = "task_id", nullable = false)
     private Task task;
+
+    @Column(name = "execution_id", length = 255)
+    private String executionId;
 
     @Column(nullable = false, length = 20)
     private String status;  // success, failed, aborted
 
-    @Column(columnDefinition = "TEXT")
-    private String message;
+    @Column(name = "output", columnDefinition = "LONGTEXT")
+    private String output;
 
-    @Column(name = "started_at")
-    private LocalDateTime startedAt;
+    @Column(name = "error_output", columnDefinition = "LONGTEXT")
+    private String errorOutput;
 
-    @Column(name = "completed_at")
-    private LocalDateTime completedAt;
+    @Column(name = "duration_ms")
+    private Integer durationMs;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;

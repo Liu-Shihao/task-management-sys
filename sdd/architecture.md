@@ -31,7 +31,7 @@
 | **开发语言** | Java | 21 |
 | **后端框架** | Spring Boot | 3.x |
 | **ORM** | JPA (Hibernate) | 6.x |
-| **数据库** | MySQL | 8.x |
+| **数据库** | 开发/测试：H2（内存）；生产：MySQL | 8.x |
 | **构建工具** | Maven | 3.9+ |
 | **API 文档** | SpringDoc OpenAPI | 2.3.0 |
 | **Excel 处理** | Apache POI | 5.2.5 |
@@ -114,13 +114,13 @@ Repositories --> Database
 
 | 模块 | 包路径 | 职责 | 关键技术 |
 |------|--------|------|----------|
-| **导入模块** | `com.taskman.import` | Excel 解析、数据验证 | Apache POI |
-| **模板管理** | `com.taskman.template` | 模板 CRUD、克隆、生成 Rundown | JPA |
-| **Rundown 管理** | `com.taskman.rundown` | 清单管理、顺序控制 | JPA + 事务 |
-| **任务控制** | `com.taskman.task` | 任务 CRUD、状态管理 | JPA |
-| **执行服务** | `com.taskman.executor` | Jenkins/Ansible 集成 | REST API |
-| **调度服务** | `com.taskman.scheduler` | 定时/Cron 调度 (Rundown 内置) | @Scheduled |
-| **批量执行** | `com.taskman.batch` | 并发执行、进度聚合 | @Async + ThreadPool |
+| **导入模块** | `com.taskmanagement` (ImportController, ExcelParser) | Excel 解析、数据验证 | Apache POI |
+| **模板管理** | `com.taskmanagement.service` (TemplateService) | 模板 CRUD、克隆、生成 Rundown | JPA |
+| **Rundown 管理** | `com.taskmanagement.service` (RundownService) | 清单管理、顺序控制 | JPA + 事务 |
+| **任务控制** | `com.taskmanagement.service` (TaskService) | 任务 CRUD、状态管理 | JPA |
+| **执行服务** | `com.taskmanagement.executor` | Jenkins/Ansible 集成 | REST API |
+| **调度服务** | `com.taskmanagement.service` (SchedulerService) | 定时/Cron 调度 (Rundown 内置) | @Scheduled |
+| **批量执行** | `com.taskmanagement.service` (ExecutionService 等) | 并发执行、进度聚合 | @Async + ThreadPool |
 
 ### 3.2 模块依赖关系
 
@@ -128,7 +128,7 @@ Repositories --> Database
 @startuml
 !theme plain
 
-package "com.taskman" {
+package "com.taskmanagement" {
     [controller] <<M>>
     [service] <<M>>
     [repository] <<M>>

@@ -1,59 +1,31 @@
 package com.taskmanagement.service;
 
 import com.taskmanagement.dto.request.CreateTemplateRequest;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import com.taskmanagement.dto.request.GenerateRundownRequest;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import com.taskmanagement.dto.response.RundownResponse;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.taskmanagement.dto.response.TaskResponse;
 import com.taskmanagement.dto.response.TemplateResponse;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.taskmanagement.dto.response.TemplateTaskResponse;
 import com.taskmanagement.entity.*;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import com.taskmanagement.exception.BusinessException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import com.taskmanagement.repository.*;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Pageable;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.transaction.annotation.Transactional;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.time.LocalDate;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import java.time.format.DateTimeFormatter;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import java.util.List;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import java.util.stream.Collectors;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Template management service
  */
+@Slf4j
 @Service
-
 public class TemplateService {
-    private static final Logger log = LoggerFactory.getLogger(TemplateService.class);
 
     private final TemplateRepository templateRepository;
     private final TemplateTaskRepository templateTaskRepository;
@@ -105,25 +77,29 @@ public class TemplateService {
         }
 
         // Build template
-        Template template = new Template();
-        template.setName(request.getName());
-        template.setDescription(request.getDescription());
-        template.setCreatedBy(userId);
+        final Template template = Template.builder()
+                .name(request.getName())
+                .description(request.getDescription())
+                .createdBy(userId)
+                .build();
 
         // Add tasks
-        request.getTasks().forEach(taskRequest -> {
-            TemplateTask task = new TemplateTask();
-            task.setName(taskRequest.getName());
-            task.setTaskType(taskRequest.getTaskType());
-            task.setConfig(taskRequest.getConfig());
-            task.setOrderIndex(taskRequest.getOrderIndex());
-            template.addTask(task);
-        });
+        if (request.getTasks() != null) {
+            request.getTasks().forEach(taskRequest -> {
+                TemplateTask task = TemplateTask.builder()
+                        .name(taskRequest.getName())
+                        .taskType(taskRequest.getTaskType())
+                        .config(taskRequest.getConfig())
+                        .orderIndex(taskRequest.getOrderIndex())
+                        .build();
+                template.addTask(task);
+            });
+        }
 
-        template = templateRepository.save(template);
-        log.info("Template created with id: {}", template.getId());
+        Template savedTemplate = templateRepository.save(template);
+        log.info("Template created with id: {}", savedTemplate.getId());
 
-        return toResponse(template);
+        return toResponse(savedTemplate);
     }
 
     /**
@@ -136,7 +112,7 @@ public class TemplateService {
         Template source = templateRepository.findById(id)
                 .orElseThrow(() -> new BusinessException.ResourceNotFoundException("Template", id));
 
-        Template clone = Template.builder()
+        final Template clone = Template.builder()
                 .name(newName != null ? newName : source.getName() + " (Copy)")
                 .description(source.getDescription())
                 .createdBy(userId)
@@ -153,10 +129,10 @@ public class TemplateService {
             clone.addTask(newTask);
         });
 
-        clone = templateRepository.save(clone);
-        log.info("Template cloned with id: {}", clone.getId());
+        Template savedClone = templateRepository.save(clone);
+        log.info("Template cloned with id: {}", savedClone.getId());
 
-        return toResponse(clone);
+        return toResponse(savedClone);
     }
 
     /**
@@ -187,17 +163,16 @@ public class TemplateService {
             Task newTask = Task.builder()
                     .name(task.getName())
                     .taskType(task.getTaskType())
-                    .config(task.getConfig())
                     .orderIndex(task.getOrderIndex())
                     .status(Task.STATUS_PENDING)
                     .build();
             rundown.addTask(newTask);
         });
 
-        rundown = rundownRepository.save(rundown);
+        Rundown savedRundown = rundownRepository.save(rundown);
         log.info("Rundown generated with code: {}", rundownCode);
 
-        return toRundownResponse(rundown);
+        return toRundownResponse(savedRundown);
     }
 
     /**
@@ -210,11 +185,6 @@ public class TemplateService {
         if (!templateRepository.existsById(id)) {
             throw new BusinessException.ResourceNotFoundException("Template", id);
         }
-
-        // Check if any rundown references this template
-        long rundownCount = rundownRepository.count();
-        // Note: In production, check if any rundown has this template_id
-        // For now, allow deletion
 
         templateRepository.deleteById(id);
         log.info("Template deleted: {}", id);
@@ -236,13 +206,14 @@ public class TemplateService {
     }
 
     private TemplateResponse toResponse(Template template) {
-        List<TemplateResponse.TemplateTaskResponse> tasks = template.getTasks().stream()
-                .map(task -> TemplateResponse.TemplateTaskResponse.builder()
+        List<TemplateTaskResponse> tasks = template.getTasks().stream()
+                .map(task -> TemplateTaskResponse.builder()
                         .id(task.getId())
                         .name(task.getName())
                         .taskType(task.getTaskType())
                         .config(task.getConfig())
                         .orderIndex(task.getOrderIndex())
+                        .createdAt(task.getCreatedAt())
                         .build())
                 .collect(Collectors.toList());
 
@@ -253,17 +224,17 @@ public class TemplateService {
                 .createdBy(template.getCreatedBy())
                 .createdAt(template.getCreatedAt())
                 .updatedAt(template.getUpdatedAt())
+                .taskCount(tasks.size())
                 .tasks(tasks)
                 .build();
     }
 
     private RundownResponse toRundownResponse(Rundown rundown) {
-        List<RundownResponse.TaskResponse> tasks = rundown.getTasks().stream()
-                .map(task -> RundownResponse.TaskResponse.builder()
+        List<TaskResponse> tasks = rundown.getTasks().stream()
+                .map(task -> TaskResponse.builder()
                         .id(task.getId())
                         .name(task.getName())
                         .taskType(task.getTaskType())
-                        .config(task.getConfig())
                         .orderIndex(task.getOrderIndex())
                         .status(task.getStatus())
                         .externalId(task.getExternalId())
@@ -293,6 +264,7 @@ public class TemplateService {
                 .scheduleStatus(rundown.getScheduleStatus())
                 .nextRunTime(rundown.getNextRunTime())
                 .lastRunAt(rundown.getLastRunAt())
+                .taskCount(tasks.size())
                 .tasks(tasks)
                 .build();
     }

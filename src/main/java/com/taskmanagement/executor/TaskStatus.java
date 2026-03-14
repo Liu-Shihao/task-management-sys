@@ -1,29 +1,20 @@
 package com.taskmanagement.executor;
 
 import lombok.*;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.slf4j.Logger;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.slf4j.LoggerFactory;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Task status DTO
  */
-@Getter
-@Setter
+@Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class TaskStatus {
-    private static final Logger log = LoggerFactory.getLogger(TaskStatus.class);
 
     private Long taskId;
     private String status;
     private String message;
+    private String externalUrl;
 
     public static TaskStatus pending(Long taskId) {
         return TaskStatus.builder().taskId(taskId).status("pending").build();

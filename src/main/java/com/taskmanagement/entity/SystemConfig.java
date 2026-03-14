@@ -9,8 +9,7 @@ import java.time.LocalDateTime;
  */
 @Entity
 @Table(name = "system_config")
-@Getter
-@Setter
+@Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
@@ -20,17 +19,18 @@ public class SystemConfig {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, unique = true, length = 100)
+    @Column(name = "config_key", nullable = false, unique = true, length = 100)
     private String configKey;
 
-    @Column(nullable = false, columnDefinition = "TEXT")
+    @Column(name = "config_value", nullable = false, columnDefinition = "TEXT")
     private String configValue;
 
-    @Column(length = 200)
-    private String description;
+    @Column(name = "value_type", nullable = false, length = 20)
+    @Builder.Default
+    private String valueType = "string";  // string, json, encrypted
 
-    @Column(name = "is_encrypted")
-    private boolean encrypted = false;
+    @Column(columnDefinition = "TEXT")
+    private String description;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;

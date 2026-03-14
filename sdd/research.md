@@ -14,7 +14,7 @@
 |------|----------|
 | 开发语言 | Java 21 |
 | 后端框架 | Spring Boot 3.x |
-| 数据库 | MySQL 8.x |
+| 数据库 | 开发/测试：H2（内存）；生产：MySQL 8.x |
 | ORM | JPA (Hibernate) |
 | 构建工具 | Maven |
 

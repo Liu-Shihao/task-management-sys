@@ -92,7 +92,7 @@ public class ExecutionService {
             ExecutionResult result = executorFactory.execute(task);
 
             // Update task with result
-            task.setExternalId(result.getExecutionId());
+            task.setExternalId(result.getExecutionId() != null ? String.valueOf(result.getExecutionId()) : null);
             task.setExternalUrl(result.getExternalUrl());
             
             if (result.isSuccess()) {
@@ -151,7 +151,7 @@ public class ExecutionService {
         ExecutionResult result = executorFactory.execute(task);
 
         // Update task with result
-        task.setExternalId(result.getExecutionId());
+        task.setExternalId(result.getExecutionId() != null ? String.valueOf(result.getExecutionId()) : null);
         task.setExternalUrl(result.getExternalUrl());
         
         if (result.isSuccess()) {

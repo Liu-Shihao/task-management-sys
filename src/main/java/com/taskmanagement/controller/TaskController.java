@@ -1,46 +1,28 @@
 package com.taskmanagement.controller;
 
 import com.taskmanagement.dto.response.ApiResponse;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import com.taskmanagement.dto.response.RundownResponse;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.taskmanagement.dto.response.TaskResponse;
 import com.taskmanagement.entity.Task;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import com.taskmanagement.service.RundownService;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import com.taskmanagement.service.TaskService;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.springframework.http.ResponseEntity;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.annotation.*;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.List;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import java.util.Map;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Task controller
  */
-
 @RestController
 @RequestMapping("/api/v1")
 @RequiredArgsConstructor
 public class TaskController {
+    
     private static final Logger log = LoggerFactory.getLogger(TaskController.class);
 
     private final TaskService taskService;
@@ -50,12 +32,12 @@ public class TaskController {
      * Get tasks by rundown ID
      */
     @GetMapping("/rundowns/{rundownId}/tasks")
-    public ResponseEntity<ApiResponse<List<RundownResponse.TaskResponse>>> getTasks(@PathVariable Long rundownId) {
+    public ResponseEntity<ApiResponse<List<TaskResponse>>> getTasks(@PathVariable Long rundownId) {
         log.info("Getting tasks for rundown: {}", rundownId);
         List<Task> tasks = taskService.getTasksByRundown(rundownId);
         
-        List<RundownResponse.TaskResponse> taskResponses = tasks.stream()
-                .map(task -> RundownResponse.TaskResponse.builder()
+        List<TaskResponse> taskResponses = tasks.stream()
+                .map(task -> TaskResponse.builder()
                         .id(task.getId())
                         .name(task.getName())
                         .taskType(task.getTaskType())
@@ -78,11 +60,11 @@ public class TaskController {
      * Get task by ID
      */
     @GetMapping("/tasks/{id}")
-    public ResponseEntity<ApiResponse<RundownResponse.TaskResponse>> getTask(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse<TaskResponse>> getTask(@PathVariable Long id) {
         log.info("Getting task: {}", id);
         Task task = taskService.getTask(id);
         
-        RundownResponse.TaskResponse response = RundownResponse.TaskResponse.builder()
+        TaskResponse response = TaskResponse.builder()
                 .id(task.getId())
                 .name(task.getName())
                 .taskType(task.getTaskType())
@@ -123,7 +105,7 @@ public class TaskController {
      * Update task
      */
     @PutMapping("/tasks/{id}")
-    public ResponseEntity<ApiResponse<RundownResponse.TaskResponse>> updateTask(
+    public ResponseEntity<ApiResponse<TaskResponse>> updateTask(
             @PathVariable Long id,
             @RequestBody Map<String, Object> taskData) {
         log.info("Updating task: {}", id);
@@ -135,7 +117,7 @@ public class TaskController {
         
         Task task = taskService.updateTask(id, name, taskType, config);
         
-        RundownResponse.TaskResponse response = RundownResponse.TaskResponse.builder()
+        TaskResponse response = TaskResponse.builder()
                 .id(task.getId())
                 .name(task.getName())
                 .taskType(task.getTaskType())
