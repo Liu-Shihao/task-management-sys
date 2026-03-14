@@ -1,0 +1,730 @@
+{
+  "info": {
+    "_postman_id": "task-management-api-collecton",
+    "name": "Task Management API",
+    "description": "任务管理系统 API 集合\n\n核心功能：\n- Excel 导入任务数据\n- 模板管理\n- Rundown 发布清单管理\n- 任务执行控制\n- Jenkins/Ansible 自动化集成\n- 定时任务调度（通过 Rundown 内置字段）\n- 批量执行",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8081/api/v1",
+      "type": "string"
+    },
+    {
+      "key": "userId",
+      "value": "1",
+      "type": "string"
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"admin\",\n  \"password\": \"admin123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            },
+            "description": "用户登录（返回 JWT Token）"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  pm.test(\"Login successful\", function () {",
+                  "    pm.response.to.be.success;",
+                  "  });",
+                  "  pm.test(\"Response has token\", function () {",
+                  "    pm.expect(pm.response.json().data).to.have.property('token');",
+                  "  });",
+                  "  pm.environment.set('token', pm.response.json().data.token);",
+                  "  pm.environment.set('userId', pm.response.json().data.userId);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/auth/logout",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "logout"]
+            },
+            "description": "用户登出"
+          },
+          "response": []
+        },
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/auth/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "health"]
+            },
+            "description": "健康检查"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Import",
+      "item": [
+        {
+          "name": "Upload Excel",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "multipart/form-data"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": "/path/to/file.xlsx"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/import/upload",
+              "host": ["{{baseUrl}}"],
+              "path": ["import", "upload"]
+            },
+            "description": "上传并解析 Excel 文件（支持 .xlsx, .xls）"
+          },
+          "response": []
+        },
+        {
+          "name": "Validate Data",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"data\": [\n    {\n      \"name\": \"Task 1\",\n      \"taskType\": \"jenkins\"\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/import/validate",
+              "host": ["{{baseUrl}}"],
+              "path": ["import", "validate"]
+            },
+            "description": "验证导入的数据"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Templates",
+      "item": [
+        {
+          "name": "List Templates",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/templates?page=1&page_size=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["templates"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "页码"
+                },
+                {
+                  "key": "page_size",
+                  "value": "20",
+                  "description": "每页数量"
+                }
+              ]
+            },
+            "description": "获取模板列表（支持分页）"
+          },
+          "response": []
+        },
+        {
+          "name": "Create Template",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-User-Id",
+                "value": "{{userId}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"My Template\",\n  \"description\": \"Template description\",\n  \"tasks\": [\n    {\n      \"name\": \"Build Job\",\n      \"taskType\": \"jenkins\",\n      \"orderIndex\": 1,\n      \"config\": {\n        \"jobName\": \"my-job\",\n        \"parameters\": {}\n      }\n    },\n    {\n      \"name\": \"Deploy Script\",\n      \"taskType\": \"ansible\",\n      \"orderIndex\": 2,\n      \"config\": {\n        \"playbook\": \"deploy.yml\",\n        \"inventory\": \"production\"\n      }\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/templates",
+              "host": ["{{baseUrl}}"],
+              "path": ["templates"]
+            },
+            "description": "创建新模板"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Template",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/templates/:template_id",
+              "host": ["{{baseUrl}}"],
+              "path": ["templates", ":template_id"]
+            },
+            "description": "获取模板详情"
+          },
+          "response": []
+        },
+        {
+          "name": "Update Template",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated Template\",\n  \"description\": \"Updated description\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/templates/:template_id",
+              "host": ["{{baseUrl}}"],
+              "path": ["templates", ":template_id"]
+            },
+            "description": "更新模板"
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Template",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/templates/:template_id",
+              "host": ["{{baseUrl}}"],
+              "path": ["templates", ":template_id"]
+            },
+            "description": "删除模板"
+          },
+          "response": []
+        },
+        {
+          "name": "Clone Template",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-User-Id",
+                "value": "{{userId}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"new_name\": \"Cloned Template\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/templates/:template_id/clone",
+              "host": ["{{baseUrl}}"],
+              "path": ["templates", ":template_id", "clone"]
+            },
+            "description": "克隆模板"
+          },
+          "response": []
+        },
+        {
+          "name": "Generate Rundown",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-User-Id",
+                "value": "{{userId}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"My Rundown\",\n  \"description\": \"Generated from template\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/templates/:template_id/generate-rundown",
+              "host": ["{{baseUrl}}"],
+              "path": ["templates", ":template_id", "generate-rundown"]
+            },
+            "description": "从模板生成 Rundown"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Rundowns",
+      "item": [
+        {
+          "name": "List Rundowns",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/rundowns?page=1&page_size=20&status=pending&schedule_status=scheduled",
+              "host": ["{{baseUrl}}"],
+              "path": ["rundowns"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "页码"
+                },
+                {
+                  "key": "page_size",
+                  "value": "20",
+                  "description": "每页数量"
+                },
+                {
+                  "key": "status",
+                  "value": "pending",
+                  "description": "执行状态: pending, running, partial_success, success, aborted, failed"
+                },
+                {
+                  "key": "schedule_status",
+                  "value": "scheduled",
+                  "description": "调度状态: scheduled, running, completed, cancelled"
+                },
+                {
+                  "key": "template_id",
+                  "value": "1",
+                  "description": "模板 ID"
+                }
+              ]
+            },
+            "description": "获取 Rundown 列表（支持分页和状态筛选）"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Rundown by Code",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/rundowns/code/:code",
+              "host": ["{{baseUrl}}"],
+              "path": ["rundowns", "code", ":code"]
+            },
+            "description": "通过 Rundown 编号获取详情"
+          },
+          "response": []
+        },
+        {
+          "name": "Create Rundown",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-User-Id",
+                "value": "{{userId}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"My Rundown\",\n  \"description\": \"Rundown description\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/rundowns",
+              "host": ["{{baseUrl}}"],
+              "path": ["rundowns"]
+            },
+            "description": "创建空白 Rundown"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Rundown",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/rundowns/:rundown_id",
+              "host": ["{{baseUrl}}"],
+              "path": ["rundowns", ":rundown_id"]
+            },
+            "description": "获取 Rundown 详情"
+          },
+          "response": []
+        },
+        {
+          "name": "Update Rundown",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated Rundown\",\n  \"description\": \"Updated description\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/rundowns/:rundown_id",
+              "host": ["{{baseUrl}}"],
+              "path": ["rundowns", ":rundown_id"]
+            },
+            "description": "更新 Rundown"
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Rundown",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/rundowns/:rundown_id",
+              "host": ["{{baseUrl}}"],
+              "path": ["rundowns", ":rundown_id"]
+            },
+            "description": "删除 Rundown"
+          },
+          "response": []
+        },
+        {
+          "name": "Execute Rundown",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/rundowns/:rundown_id/execute",
+              "host": ["{{baseUrl}}"],
+              "path": ["rundowns", ":rundown_id", "execute"]
+            },
+            "description": "执行 Rundown（返回 202 Accepted）"
+          },
+          "response": []
+        },
+        {
+          "name": "Batch Execute Rundowns",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"rundown_ids\": [1, 2, 3]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/rundowns/batch-execute",
+              "host": ["{{baseUrl}}"],
+              "path": ["rundowns", "batch-execute"]
+            },
+            "description": "批量执行多个 Rundown"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Tasks",
+      "item": [
+        {
+          "name": "List Tasks",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/rundowns/:rundown_id/tasks",
+              "host": ["{{baseUrl}}"],
+              "path": ["rundowns", ":rundown_id", "tasks"]
+            },
+            "description": "获取 Rundown 下的任务列表"
+          },
+          "response": []
+        },
+        {
+          "name": "Add Task",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"New Task\",\n  \"taskType\": \"jenkins\",\n  \"config\": {\n    \"jobName\": \"my-job\"\n  },\n  \"orderIndex\": 1\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/rundowns/:rundown_id/tasks",
+              "host": ["{{baseUrl}}"],
+              "path": ["rundowns", ":rundown_id", "tasks"]
+            },
+            "description": "添加任务到 Rundown"
+          },
+          "response": []
+        },
+        {
+          "name": "Reorder Tasks",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"taskIds\": [3, 1, 2]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/rundowns/:rundown_id/tasks/reorder",
+              "host": ["{{baseUrl}}"],
+              "path": ["rundowns", ":rundown_id", "tasks", "reorder"]
+            },
+            "description": "调整 Rundown 内任务顺序"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Task",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/tasks/:task_id",
+              "host": ["{{baseUrl}}"],
+              "path": ["tasks", ":task_id"]
+            },
+            "description": "获取任务详情"
+          },
+          "response": []
+        },
+        {
+          "name": "Update Task",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated Task\",\n  \"taskType\": \"ansible\",\n  \"config\": {\n    \"playbook\": \"update.yml\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/tasks/:task_id",
+              "host": ["{{baseUrl}}"],
+              "path": ["tasks", ":task_id"]
+            },
+            "description": "更新任务"
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Task",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/tasks/:task_id",
+              "host": ["{{baseUrl}}"],
+              "path": ["tasks", ":task_id"]
+            },
+            "description": "删除任务"
+          },
+          "response": []
+        },
+        {
+          "name": "Execute Task",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/tasks/:task_id/execute",
+              "host": ["{{baseUrl}}"],
+              "path": ["tasks", ":task_id", "execute"]
+            },
+            "description": "执行单个任务"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Config",
+      "item": [
+        {
+          "name": "List Configs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/config",
+              "host": ["{{baseUrl}}"],
+              "path": ["config"]
+            },
+            "description": "获取系统配置列表（敏感信息自动脱敏）"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Config by Key",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/config/:key",
+              "host": ["{{baseUrl}}"],
+              "path": ["config", ":key"]
+            },
+            "description": "获取系统配置项"
+          },
+          "response": []
+        },
+        {
+          "name": "Set Config",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"configKey\": \"jenkins_url\",\n  \"configValue\": \"http://jenkins.local\",\n  \"valueType\": \"string\",\n  \"description\": \"Jenkins server URL\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/config",
+              "host": ["{{baseUrl}}"],
+              "path": ["config"]
+            },
+            "description": "创建/更新系统配置"
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Config",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/config/:key",
+              "host": ["{{baseUrl}}"],
+              "path": ["config", ":key"]
+            },
+            "description": "删除系统配置"
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": ["// Pre-request script"]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "if (pm.response.code === 200) {",
+          "  pm.test(\"Status code is 200\", function () {",
+          "    pm.response.to.have.status(200);",
+          "  });",
+          "}"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "id": "baseUrl",
+      "key": "baseUrl",
+      "value": "http://localhost:8080/api/v1",
+      "type": "string"
+    }
+  ]
+}
